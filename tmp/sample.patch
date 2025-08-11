@@ -1,9 +1,0 @@
-diff --git a/tmp/sample.txt b/dev/fd/63
-index c0d0fb4..0000000 100644
---- a/tmp/sample.txt
-+++ b/dev/fd/63
-@@ -1,2 +1,3 @@
- line1
--line2
-+lineX
-+line3

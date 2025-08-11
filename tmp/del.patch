@@ -1,8 +1,0 @@
-diff --git a/tmp/new.txt b/tmp/new.txt
-deleted file mode 100644
-index e69de29..0000000
---- a/tmp/new.txt
-+++ /dev/null
-@@ -1,2 +0,0 @@
--hello
--world

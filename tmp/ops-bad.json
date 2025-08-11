@@ -1,3 +1,0 @@
-{ "dryRun": true, "ops": [
-  { "op": "write", "path": "../../etc/passwd", "content": "nope" }
-]}

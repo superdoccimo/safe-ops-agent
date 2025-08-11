@@ -1,9 +1,0 @@
-diff --git a/tmp/sample.txt b/tmp/sample.txt
-index 0000000..0000000 100644
---- a/tmp/sample.txt
-+++ b/tmp/sample.txt
-@@ -1,2 +1,3 @@
- line1
--line2
-+lineX
-+line3

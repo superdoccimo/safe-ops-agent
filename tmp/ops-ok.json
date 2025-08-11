@@ -1,5 +1,0 @@
-{ "dryRun": true, "ops": [
-  { "op": "write", "path": "tmp/proof.txt", "content": "ok" },
-  { "op": "mkdir", "path": "tmp/proofdir" },
-  { "op": "delete", "path": "tmp/will-delete.txt" }
-]}

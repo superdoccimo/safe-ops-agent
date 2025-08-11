@@ -1,0 +1,37 @@
+{
+  "steps": [
+    {
+      "name": "deploy",
+      "status": "planned",
+      "ms": 0,
+      "stdoutTail": "",
+      "stderrTail": "",
+      "exitCode": 0,
+      "retries": 0,
+      "start": "2025-08-11T10:28:35.434Z",
+      "end": "2025-08-11T10:28:35.434Z"
+    },
+    {
+      "name": "invalidate",
+      "status": "planned",
+      "ms": 0,
+      "stdoutTail": "",
+      "stderrTail": "",
+      "exitCode": 0,
+      "retries": 0,
+      "start": "2025-08-11T10:28:35.434Z",
+      "end": "2025-08-11T10:28:35.434Z"
+    },
+    {
+      "name": "healthcheck",
+      "status": "planned",
+      "ms": 0,
+      "stdoutTail": "",
+      "stderrTail": "",
+      "exitCode": 0,
+      "retries": 0,
+      "start": "2025-08-11T10:28:35.434Z",
+      "end": "2025-08-11T10:28:35.434Z"
+    }
+  ]
+}

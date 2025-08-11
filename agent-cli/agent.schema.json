@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Agent Recipe Schema",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string" },
+    "target": { "type": "string" },
+    "steps": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "properties": {
+              "step": { "type": "string" }
+            },
+            "required": ["step"],
+            "additionalProperties": true
+          }
+        ]
+      }
+    }
+  },
+  "required": ["steps"],
+  "additionalProperties": true
+}
+

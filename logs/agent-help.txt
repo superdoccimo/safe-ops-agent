@@ -1,0 +1,22 @@
+agent <command> [options]
+
+Commands:
+  deploy       Deploy via SSH (git pull → build → PM2 reload)
+  check        Healthcheck via curl
+  revalidate   Call Next.js /api/revalidate
+  logs         Tail PM2/app logs
+  fix          Apply local diff operations (write/delete/mkdir)
+  serve        Start minimal local HTTP UI/API
+  patch        Convert unified diff to ops JSON (use --apply to apply)
+  ingest       Run command to get unified diff (use --cmd "…")
+
+Options:
+  --target <name>     Target name from agent.config.json
+  --slug <slug>       For revalidate
+  --path <path>       For revalidate
+  --dry-run           Print actions without executing
+  --input <file>      JSON file for 'fix' ops
+  --port <port>       Port for 'serve' (default 8787)
+  --apply             Apply converted ops (for 'patch')
+  --cmd <command>     Command to execute (for 'ingest')
+

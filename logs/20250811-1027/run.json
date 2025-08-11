@@ -1,0 +1,25 @@
+{
+  "steps": [
+    {
+      "name": "deploy",
+      "status": "planned",
+      "ms": 0,
+      "stdoutTail": "",
+      "stderrTail": ""
+    },
+    {
+      "name": "invalidate",
+      "status": "planned",
+      "ms": 0,
+      "stdoutTail": "",
+      "stderrTail": ""
+    },
+    {
+      "name": "healthcheck",
+      "status": "planned",
+      "ms": 0,
+      "stdoutTail": "",
+      "stderrTail": ""
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+[
+  { "op": "write", "path": "tmp/demo.txt", "content": "hello from fix dry-run" },
+  { "op": "mkdir", "path": "tmp/newdir" },
+  { "op": "delete", "path": "tmp/will-be-deleted.txt" }
+]

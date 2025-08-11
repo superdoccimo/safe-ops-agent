@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>agent-cli UI (MVP)</title>
+  <style>
+    body { font: 14px/1.5 system-ui, sans-serif; margin: 24px; }
+    textarea { width: 100%; height: 200px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    button { margin-right: 8px; }
+    .row { margin: 12px 0; }
+    pre { background: #f6f8fa; padding: 12px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>agent-cli UI (MVP)</h1>
+  <div class="row">
+    <label for="ops">diff.json（JSON配列: write/delete/mkdir）</label>
+    <textarea id="ops" placeholder='[{"op":"write","path":"src/example.txt","content":"Hello"}]'></textarea>
+  </div>
+  <div class="row">
+    <label><input type="checkbox" id="dryRun" checked /> dry-run</label>
+  </div>
+  <div class="row">
+    <button id="applyBtn">Apply</button>
+    <button id="deployBtn">Deploy</button>
+    <button id="checkBtn">Healthcheck</button>
+    <input id="slug" placeholder="slug (optional)" style="margin-left:8px" />
+    <input id="path" placeholder="/path (optional)" />
+    <button id="revalidateBtn">Revalidate</button>
+    <button id="logsBtn" style="margin-left:8px">Logs</button>
+    <input id="lines" placeholder="lines" value="200" style="width:70px" />
+  </div>
+  <div class="row">
+    <pre id="out">Ready.</pre>
+  </div>
+  <script>
+    const out = document.getElementById('out');
+    function log(obj){ out.textContent = (typeof obj === 'string') ? obj : JSON.stringify(obj, null, 2); }
+    document.getElementById('applyBtn').onclick = async () => {
+      try {
+        const ops = JSON.parse(document.getElementById('ops').value || '[]');
+        const dryRun = document.getElementById('dryRun').checked;
+        const res = await fetch('/apply', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ops, dryRun }) });
+        log(await res.json());
+      } catch (e) { log(String(e)); }
+    };
+    document.getElementById('deployBtn').onclick = async () => {
+      try {
+        const res = await fetch('/deploy?target=prod', { method: 'POST' });
+        const data = await res.json();
+        if (data.logs) {
+          const text = data.logs.map(l => `$ ${l.cmd}\n${l.stdout || ''}${l.stderr ? ('\n[stderr]\n' + l.stderr) : ''}`).join('\n\n');
+          log(text);
+        } else log(data);
+      } catch (e) { log(String(e)); }
+    };
+    document.getElementById('checkBtn').onclick = async () => {
+      try {
+        const res = await fetch('/check?target=prod', { method: 'POST' });
+        log(await res.json());
+      } catch (e) { log(String(e)); }
+    };
+    document.getElementById('revalidateBtn').onclick = async () => {
+      try {
+        const body = { slug: document.getElementById('slug').value || undefined, path: document.getElementById('path').value || undefined };
+        const res = await fetch('/revalidate', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        log(await res.json());
+      } catch (e) { log(String(e)); }
+    };
+    document.getElementById('logsBtn').onclick = async () => {
+      try {
+        const n = document.getElementById('lines').value || '200';
+        const res = await fetch('/logs?target=prod&lines=' + encodeURIComponent(n));
+        const data = await res.json();
+        log(data.logs || data);
+      } catch (e) { log(String(e)); }
+    };
+  </script>
+</body>
+</html>

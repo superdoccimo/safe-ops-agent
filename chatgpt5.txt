@@ -1,0 +1,123 @@
+目的:
+
+agent-cli を汎用化して GitHub 公開可能な v0.1 を作る。
+
+重点: 安全な差分適用、宣言的レシピ、ローカル完結。Next/Strapi 特化は examples に退避。
+
+前提:
+
+現在のツリー: bin/ src/{commands,lib,...} ほか
+
+Node 18+。外部依存は最小。
+
+機密は扱わない。SSH先や実鍵はダミー。
+
+やらないこと(非目標):
+
+常駐サーバや豪華UIの作り込み
+
+ベンダー固定のコードをコアへ直書き
+
+作業順(1〜7)と受け入れ条件:
+
+フォルダ再編
+
+変更: src/{core,commands,adapters,steps,lib} に再配置。import/require 修正。
+
+受入: 既存コマンド(help, deploy, check, revalidate, fix, patch, ingest, serve)が等価動作。dry-run可。
+
+レシピ実行エンジンの骨格
+
+仕様: agent.yml を読み込み、steps を順に plan→run。plan は実行コマンド列を返却、run は実行。
+
+最低ステップ: git-pull, build, pm2-reload, healthcheck, invalidate(=revalidate) のダミー実装。
+
+受入: agent run-recipe --recipe examples/static/agent.yml で dry-run 計画を人間可読に出力。
+
+Adapter 抽象化
+
+仕様: adapters/{next,strapi} は情報提供IFのみ(例: revalidate URL/secret 取得、API前処理)。
+
+受入: adapters なしでも recipes/basic が動作。adapters 有りで追加情報が注入されても壊れない。
+
+patch/ingest の単体テスト
+
+ケース: 新規/変更/削除/rename/外部パス拒否。rename は write+delete で再現。
+
+受入: npm test で全成功。ワークスペース外は拒否ログを出して失敗。
+
+ドキュメント整備
+
+README: 汎用タグライン、Quick Start、Adapter/Recipe の概念図、最小の agent.yml 例。
+
+examples/: static, next, strapi の最小 agent.yml と config サンプル。
+
+受入: README の手順で再現可能。examples は CI で dry-run 通過。
+
+コマンドの別名と help 整形
+
+追加: run-recipe, health, invalidate など中立名。既存 deploy/check/revalidate は当面 alias。
+
+受入: agent help が冗長なく整理され、旧名/新名どちらも動作。
+
+SECURITY/CONTRIBUTING 下書き
+
+SECURITY: 外部パス拒否、--force 利用時の注意、責任範囲。
+
+CONTRIBUTING: issue/PR ポリシー、テスト方針。
+
+受入: 英語(推奨)で初稿、後で私が微修正。
+
+作業時の制約:
+
+デフォルトは dry-run を尊重。実行系には --dry-run を受け付ける。
+
+パスは CWD 配下のみ。相対/絶対/.. を含む外部書き込みを拒否。
+
+SSH コマンド生成は常に安全なクオート。
+
+生成物(必須):
+
+リネーム＋再配置の unified diff（大きい場合は段階PRでも可）
+
+src/core/{loader,runner}.js など骨格
+
+agent.schema.json（targets/recipes/adapters の JSON Schema）
+
+examples/static/agent.yml, examples/next/agent.yml, examples/strapi/agent.yml
+
+README, SECURITY.md, CONTRIBUTING.md 初稿
+
+テスト: patch/ingest の単体テスト一式
+
+CI: lint+unit のみの軽いワークフロー
+
+完了確認のためのローカル手順(実行例・実行はdry-runで十分):
+
+node bin/agent help
+
+node bin/agent run-recipe --recipe examples/static/agent.yml --dry-run
+
+node bin/agent patch --input tests/fixtures/rename.patch --apply --dry-run
+
+npm test
+
+(任意) node bin/agent health --target sample --dry-run
+
+既知の落とし穴(回避指示):
+
+rename をパース出来ても mode 変更は未対応で良い。無理に扱わない。
+
+改行コードやファイル末尾の newline は差分適用で壊さない。
+
+symlink は辿らない。
+
+Windows パスは無視でOK(クロスプラットフォームは後続)。
+
+出力形式:
+
+変更は unified diff か ops(JSON) で提示。
+
+ログは logs/YYYYMMDD-HHMM/ に出力するコードを同梱。
+
+以上を満たすパッチとファイル群を提案してください。段階PRに分けてもOKです。

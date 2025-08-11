@@ -1,0 +1,4 @@
+[PARITY] apply_ok_dryrun wrote=1 deleted=1 mkdir=1
+[PARITY] apply_escape blocked=true msg=Refuse to touch outside workspace: ../../etc/passwd
+[PARITY] patch_ok_dryrun ops=1 wrote=1
+[PARITY] patch_escape blocked=true msg=Refuse to touch outside workspace: ../../etc/evil

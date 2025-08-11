@@ -1,0 +1,8 @@
+{
+  "task": "Next.js バグ修正（ISRリンク不整合）",
+  "logs": {"codex": "logs/codex-fix.txt", "claude": "logs/claude-fix.txt"},
+  "tools": {
+    "codex": { "turns": null, "minutes": null, "successRate": null, "limits": null, "notes": "" },
+    "claude": { "turns": null, "minutes": null, "successRate": null, "limits": null, "notes": "" }
+  }
+}

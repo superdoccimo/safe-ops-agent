@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install deps
+        run: |
+          cd agent-cli
+          npm ci || npm i
+      - name: Unit tests
+        run: |
+          cd agent-cli
+          npm test
+      - name: Dry-run recipe (static)
+        run: |
+          cd agent-cli
+          node bin/agent run-recipe --recipe ../examples/static/agent.yml --dry-run --format=json
+      - name: Dry-run recipe (next)
+        run: |
+          cd agent-cli
+          node bin/agent run-recipe --recipe ../examples/next/agent.yml --dry-run --format=json
+      - name: Dry-run recipe (strapi)
+        run: |
+          cd agent-cli
+          node bin/agent run-recipe --recipe ../examples/strapi/agent.yml --dry-run --format=json
+      - name: Upload logs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: logs

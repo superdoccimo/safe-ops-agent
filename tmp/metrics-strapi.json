@@ -1,0 +1,8 @@
+{
+  "task": "Strapi API 仕様変更への追随",
+  "logs": {"codex": "logs/codex-strapi.txt", "claude": "logs/claude-strapi.txt"},
+  "tools": {
+    "codex": { "turns": null, "minutes": null, "successRate": null, "limits": null, "notes": "" },
+    "claude": { "turns": null, "minutes": null, "successRate": null, "limits": null, "notes": "" }
+  }
+}

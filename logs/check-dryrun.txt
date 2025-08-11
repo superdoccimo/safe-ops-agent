@@ -1,0 +1,2 @@
+[dry-run] ssh -p 22 -i ~/.ssh/id_ed25519 ubuntu@your.server.com 'cd /home/ubuntu/strapi && bash -lc "code=$(curl -sS -o /dev/null -w '''%{http_code}''' http://127.0.0.1:3000/ || echo 000); echo '''[HC] http://127.0.0.1:3000/ -> '''$code; test $code -ge 200 -a $code -lt 400"'
+[dry-run] ssh -p 22 -i ~/.ssh/id_ed25519 ubuntu@your.server.com 'cd /home/ubuntu/strapi && bash -lc "code=$(curl -sS -o /dev/null -w '''%{http_code}''' http://127.0.0.1:3000/sitemap.xml || echo 000); echo '''[HC] http://127.0.0.1:3000/sitemap.xml -> '''$code; test $code -ge 200 -a $code -lt 400"'

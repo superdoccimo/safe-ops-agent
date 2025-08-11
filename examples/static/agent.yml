@@ -1,0 +1,9 @@
+{
+  "name": "static-deploy",
+  "target": "prod",
+  "steps": [
+    { "step": "deploy" },
+    { "step": "healthcheck" }
+  ]
+}
+

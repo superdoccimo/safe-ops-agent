@@ -1,0 +1,10 @@
+{
+  "name": "next-deploy",
+  "target": "prod",
+  "revalidate": { "slug": "/hello-strapi" },
+  "steps": [
+    { "step": "deploy" },
+    { "step": "revalidate" },
+    { "step": "healthcheck" }
+  ]
+}

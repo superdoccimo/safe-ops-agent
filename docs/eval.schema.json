@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Agent CLI Evaluation Metrics",
+  "type": "object",
+  "required": ["task", "tools"],
+  "properties": {
+    "task": { "type": "string", "description": "Human-readable task name" },
+    "logs": {
+      "type": "object",
+      "properties": {
+        "codex": { "type": "string" },
+        "claude": { "type": "string" }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "required": ["codex", "claude"],
+      "properties": {
+        "codex": { "$ref": "#/definitions/ToolMetrics" },
+        "claude": { "$ref": "#/definitions/ToolMetrics" }
+      }
+    }
+  },
+  "definitions": {
+    "ToolMetrics": {
+      "type": "object",
+      "required": ["turns", "minutes", "successRate"],
+      "properties": {
+        "turns": { "type": "integer", "minimum": 0 },
+        "minutes": { "type": "number", "minimum": 0 },
+        "successRate": { "type": "number", "minimum": 0, "maximum": 100 },
+        "limits": { "type": "integer", "minimum": 0, "description": "Rate-limit or length-limit hits" },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}
+

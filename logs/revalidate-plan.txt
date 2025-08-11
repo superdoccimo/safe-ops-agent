@@ -1,1 +1,0 @@
-[revalidate-plan] POST https://minokamo.xyz/api/revalidate?secret=change_me body={"slug":"hello-strapi"}

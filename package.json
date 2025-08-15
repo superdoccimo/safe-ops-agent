@@ -14,7 +14,15 @@
     "lint": "cd agent-cli && npm run lint",
     "build": "cd agent-cli && npm run build",
     "demo": "cd agent-cli && npm run demo:fix:dry",
-    "audit": "cd agent-cli && npm audit"
+    "audit": "cd agent-cli && npm audit",
+    "benchmark": "node benchmarks/runner.js",
+    "benchmark:claude": "node scripts/switch-environment.js run claude",
+    "benchmark:codex": "node scripts/switch-environment.js run codex",
+    "benchmark:compare": "node scripts/switch-environment.js compare",
+    "env:list": "node scripts/switch-environment.js list",
+    "env:switch": "node scripts/switch-environment.js switch",
+    "env:current": "node scripts/switch-environment.js current",
+    "results:compare": "node scripts/compare-results.js"
   },
   "keywords": [
     "ai",

@@ -1,0 +1,66 @@
+name: "Codex CLI Evaluation"
+description: "Performance benchmark for Codex CLI tool"
+environment: "codex"
+
+# Test configuration
+config:
+  iterations: 3
+  timeout: 30000  # 30 seconds
+  output_format: "json"
+  
+# Environment variables
+env:
+  NODE_ENV: "test"
+  TEST_ITERATIONS: "5"
+  TEST_TIMEOUT: "5000"
+  CONTENT_FILE_COUNT: "10"
+  CONTENT_SIZE: "1000"
+  CONTENT_OUTPUT_DIR: "./tmp/generated-codex"
+
+# Pre-test setup
+before:
+  - name: "Cleanup previous results"
+    command: "rm -rf ./tmp/generated-codex ./results/codex-*"
+  - name: "Ensure directories"
+    command: "mkdir -p ./tmp/generated-codex ./results"
+
+# Test scenarios
+scenarios:
+  - name: "server_startup"
+    description: "Measure server startup time"
+    command: "node scripts/start-server.js"
+    metric: "startup_time_ms"
+    repeat: 3
+    
+  - name: "api_performance"
+    description: "Measure API response times"
+    command: "node scripts/api-test.js"
+    metric: "average_response_time"
+    repeat: 3
+    env:
+      TEST_BASE_URL: "http://localhost:3000"
+      
+  - name: "content_generation"
+    description: "Measure content generation speed"
+    command: "node scripts/content-gen.js"
+    metric: "total_time_ms"
+    repeat: 3
+
+# Post-test cleanup
+after:
+  - name: "Archive results"
+    command: "cp -r ./tmp/generated-codex ./results/codex-generated-$(date +%Y%m%d-%H%M%S)"
+  - name: "Generate summary"
+    command: "echo 'Codex CLI evaluation completed' > ./results/codex-summary.txt"
+
+# Expected outputs
+outputs:
+  results_dir: "./results"
+  log_file: "./results/codex-execution.log"
+  metrics_file: "./results/codex-metrics.json"
+  
+# Comparison baseline
+baseline:
+  server_startup_ms: 1000
+  api_response_ms: 100
+  content_gen_ms: 5000

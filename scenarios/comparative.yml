@@ -1,0 +1,87 @@
+name: "Comparative Evaluation"
+description: "Side-by-side comparison of Claude Code vs Codex CLI"
+environment: "comparison"
+
+# Test configuration
+config:
+  iterations: 5
+  timeout: 60000  # 60 seconds for comparison
+  output_format: "json"
+  parallel_execution: false  # Run sequentially for fair comparison
+  
+# Environment variables
+env:
+  NODE_ENV: "test"
+  TEST_ITERATIONS: "10"
+  TEST_TIMEOUT: "5000"
+  CONTENT_FILE_COUNT: "20"
+  CONTENT_SIZE: "2000"
+
+# Pre-test setup
+before:
+  - name: "Full cleanup"
+    command: "rm -rf ./tmp/generated-* ./results/comparative-*"
+  - name: "Ensure all directories"
+    command: "mkdir -p ./tmp/generated-claude ./tmp/generated-codex ./results"
+  - name: "System info"
+    command: "node -v && npm -v && echo 'OS:' $(uname -a) > ./results/system-info.txt"
+
+# Comparative test scenarios
+scenarios:
+  - name: "startup_comparison"
+    description: "Compare server startup times"
+    tests:
+      - environment: "claude"
+        command: "CONTENT_OUTPUT_DIR=./tmp/generated-claude node scripts/start-server.js"
+        repeat: 5
+      - environment: "codex"
+        command: "CONTENT_OUTPUT_DIR=./tmp/generated-codex node scripts/start-server.js"
+        repeat: 5
+        
+  - name: "api_comparison"
+    description: "Compare API performance"
+    tests:
+      - environment: "claude"
+        command: "node scripts/api-test.js"
+        repeat: 5
+      - environment: "codex"
+        command: "node scripts/api-test.js"
+        repeat: 5
+        
+  - name: "content_comparison"
+    description: "Compare content generation speed"
+    tests:
+      - environment: "claude"
+        command: "CONTENT_OUTPUT_DIR=./tmp/generated-claude node scripts/content-gen.js"
+        repeat: 5
+      - environment: "codex"
+        command: "CONTENT_OUTPUT_DIR=./tmp/generated-codex node scripts/content-gen.js"
+        repeat: 5
+
+# Post-test analysis
+after:
+  - name: "Generate comparison report"
+    command: "node scripts/compare-results.js"
+  - name: "Archive all results"
+    command: "tar -czf ./results/comparative-$(date +%Y%m%d-%H%M%S).tar.gz ./tmp/generated-* ./results/*.json"
+
+# Expected outputs
+outputs:
+  results_dir: "./results"
+  comparison_report: "./results/comparison-report.md"
+  raw_metrics: "./results/comparative-metrics.json"
+  
+# Evaluation criteria
+criteria:
+  performance:
+    weight: 40
+    metrics: ["startup_time", "api_response_time", "generation_speed"]
+  reliability:
+    weight: 30
+    metrics: ["success_rate", "error_count", "consistency"]
+  usability:
+    weight: 20
+    metrics: ["ease_of_use", "documentation_quality", "integration"]
+  cost:
+    weight: 10
+    metrics: ["resource_usage", "api_costs", "time_investment"]

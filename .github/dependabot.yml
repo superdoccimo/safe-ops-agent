@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/agent-cli"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "maintainer-team"
+    assignees:
+      - "maintainer-team"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(dev-deps)"
+    open-pull-requests-limit: 10
+    
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "maintainer-team"
+    assignees:
+      - "maintainer-team"
+    commit-message:
+      prefix: "chore(ci)"
+    open-pull-requests-limit: 5

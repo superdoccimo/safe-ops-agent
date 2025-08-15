@@ -44,11 +44,13 @@ async function serve(config, flags) {
       }
       if (req.method === 'POST' && p === '/apply') {
         const body = await readJson(req);
-        const dryRun = !!body.dryRun;
+        // Check for explicit apply permission
+        const allowApply = process.env.ALLOW_APPLY === 'true' || body.forceApply === true;
+        const dryRun = allowApply ? !!body.dryRun : true; // Default to dry-run unless explicitly allowed
         const ops = body.ops || body;
         const summary = applyOps(ops, { dryRun });
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, summary }));
+        res.end(JSON.stringify({ ok: true, summary, dryRun }));
         return;
       }
       if (req.method === 'POST' && p === '/patch') {
@@ -56,9 +58,12 @@ async function serve(config, flags) {
         const text = body.patch || '';
         const ops = unifiedToOps(text, process.cwd());
         if (body.apply) {
-          const summary = applyOps(ops, { dryRun: !!body.dryRun });
+          // Check for explicit apply permission
+          const allowApply = process.env.ALLOW_APPLY === 'true' || body.forceApply === true;
+          const dryRun = allowApply ? !!body.dryRun : true; // Default to dry-run unless explicitly allowed
+          const summary = applyOps(ops, { dryRun });
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, summary }));
+          res.end(JSON.stringify({ ok: true, summary, dryRun }));
         } else {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true, ops }));

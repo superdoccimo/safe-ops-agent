@@ -35,10 +35,40 @@ function parseFlags(list) {
   return out;
 }
 
+function validateConfig(config) {
+  const schemaPath = path.resolve(__dirname, '../../docs/agent.config.schema.json');
+  if (!fs.existsSync(schemaPath)) {
+    console.warn('[WARN] Schema validation skipped: schema file not found');
+    return;
+  }
+  
+  try {
+    const Ajv = require('ajv');
+    const addFormats = require('ajv-formats');
+    const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
+    
+    const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+    const valid = ajv.validate(schema, config);
+    
+    if (!valid) {
+      console.error('[ERR] Configuration validation failed:');
+      for (const error of ajv.errors) {
+        console.error(`  - ${error.instancePath}: ${error.message}`);
+      }
+      process.exit(1);
+    }
+  } catch (e) {
+    console.warn(`[WARN] Schema validation failed: ${e.message}`);
+  }
+}
+
 function loadConfig() {
   const p = path.resolve(process.cwd(), 'agent.config.json');
   if (fs.existsSync(p)) {
-    return JSON.parse(fs.readFileSync(p, 'utf8'));
+    const config = JSON.parse(fs.readFileSync(p, 'utf8'));
+    validateConfig(config);
+    return config;
   }
   return { targets: {}, healthcheck: {}, revalidate: {}, deploy: {} };
 }

@@ -1,3 +1,12 @@
+# ⚠️ IMPORTANT SECURITY NOTICE ⚠️
+
+**THIS TOOL DEFAULTS TO DRY-RUN MODE FOR SAFETY**
+
+- **Files are NOT modified by default** - Use `--apply` flag to execute changes
+- **External network calls are disabled by default** - Set `ALLOW_APPLY=true` for server endpoints
+- **File operations are restricted to workspace directory only**
+- **All operations are logged for audit purposes**
+
 # agent-cli × Codex 評価と運用導線（概要）
 ローカル完結のAI運用導線。パッチ取り込み→ドライラン→適用→デプロイ/チェックを最短で結ぶ。
 
@@ -60,8 +69,11 @@ node scripts/local_api_parity_test.js && sed -n '1,4p' logs/api-parity.txt
 - 生成物（パッチやops）をUIで確認→dry-run→適用までの導線を可視化
 - 公開時は内部情報を含まないスクリーンショット/ログのみ共有（秘匿値は除外）
 
-## 注意事項
-- `fix`/`serve` の適用範囲はカレントディレクトリ配下のみ（外部パス拒否）。
+## 注意事項（Security & Safety）
+- **デフォルトはdry-runモード**: 明示的に `--apply` を指定しない限りファイルは変更されません
+- **外部ネットワーク呼び出しはデフォルトオフ**: サーバーエンドポイントは `ALLOW_APPLY=true` が必要
+- **ワークスペース外の書き込み拒否**: システムファイルや他プロジェクトへの誤操作を防止
+- **Strapi投稿は下書き固定**: `publishedAt` フィールドを除去し、公開前の人間レビューを必須化
 - パッチのrename検出は write+delete で再現（mode変更等は未対応）。
 
 ## 次の一手

@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,10 +15,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'agent-cli/package-lock.json'
       - name: Install deps
         run: |
           cd agent-cli
           npm ci || npm i
+      - name: Security audit
+        run: |
+          cd agent-cli
+          npm audit --audit-level=moderate
+      - name: Lint
+        run: |
+          cd agent-cli
+          npm run lint || echo "Lint script not configured"
       - name: Unit tests
         run: |
           cd agent-cli

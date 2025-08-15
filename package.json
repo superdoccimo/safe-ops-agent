@@ -1,0 +1,58 @@
+{
+  "name": "safe-ops-agent",
+  "version": "0.1.0",
+  "description": "Secure operations agent with AI-powered code generation and deployment automation",
+  "main": "agent-cli/src/index.js",
+  "bin": {
+    "safe-ops-agent": "agent-cli/bin/agent",
+    "agent": "agent-cli/bin/agent"
+  },
+  "scripts": {
+    "install": "cd agent-cli && npm install",
+    "start": "cd agent-cli && npm run serve",
+    "test": "cd agent-cli && npm test",
+    "lint": "cd agent-cli && npm run lint",
+    "build": "cd agent-cli && npm run build",
+    "demo": "cd agent-cli && npm run demo:fix:dry",
+    "audit": "cd agent-cli && npm audit"
+  },
+  "keywords": [
+    "ai",
+    "automation", 
+    "deployment",
+    "ops",
+    "security",
+    "cli",
+    "nextjs",
+    "strapi",
+    "dry-run",
+    "patch-management"
+  ],
+  "author": "safe-ops-agent contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/safe-ops-agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/safe-ops-agent/issues"
+  },
+  "homepage": "https://github.com/your-org/safe-ops-agent#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "directories": {
+    "lib": "agent-cli/src",
+    "bin": "agent-cli/bin",
+    "test": "agent-cli/tests",
+    "doc": "docs"
+  },
+  "files": [
+    "agent-cli/",
+    "examples/",
+    "docs/",
+    "LICENSE",
+    "README.md",
+    "SECURITY.md"
+  ]
+}

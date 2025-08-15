@@ -1,0 +1,211 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://safe-ops-agent.com/schemas/agent.config.json",
+  "title": "Safe Ops Agent Configuration",
+  "description": "Configuration schema for safe-ops-agent CLI tool",
+  "type": "object",
+  "properties": {
+    "targets": {
+      "type": "object",
+      "description": "Deployment target configurations",
+      "patternProperties": {
+        "^[a-zA-Z0-9_-]+$": {
+          "type": "object",
+          "properties": {
+            "host": {
+              "type": "string",
+              "description": "SSH host address",
+              "format": "hostname"
+            },
+            "user": {
+              "type": "string",
+              "description": "SSH username",
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "port": {
+              "type": "integer",
+              "description": "SSH port number",
+              "minimum": 1,
+              "maximum": 65535,
+              "default": 22
+            },
+            "identity": {
+              "type": "string",
+              "description": "Path to SSH private key file"
+            },
+            "cwd": {
+              "type": "string",
+              "description": "Remote working directory path"
+            },
+            "pm2": {
+              "type": "string",
+              "description": "PM2 application name"
+            }
+          },
+          "required": ["host", "user", "cwd"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "healthcheck": {
+      "type": "object",
+      "description": "Health check configuration",
+      "properties": {
+        "urls": {
+          "type": "array",
+          "description": "URLs to check for health monitoring",
+          "items": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https?://"
+          },
+          "minItems": 1
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Request timeout in milliseconds",
+          "minimum": 1000,
+          "maximum": 30000,
+          "default": 5000
+        },
+        "retries": {
+          "type": "integer",
+          "description": "Number of retry attempts",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 3
+        }
+      },
+      "required": ["urls"],
+      "additionalProperties": false
+    },
+    "revalidate": {
+      "type": "object",
+      "description": "Cache revalidation configuration",
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "description": "Revalidation endpoint URL",
+          "format": "uri",
+          "pattern": "^https?://"
+        },
+        "secret": {
+          "type": "string",
+          "description": "Revalidation secret token",
+          "minLength": 8
+        }
+      },
+      "required": ["endpoint", "secret"],
+      "additionalProperties": false
+    },
+    "deploy": {
+      "type": "object",
+      "description": "Deployment command configuration",
+      "properties": {
+        "build": {
+          "type": "string",
+          "description": "Build command"
+        },
+        "start": {
+          "type": "string",
+          "description": "Start command"
+        },
+        "stop": {
+          "type": "string",
+          "description": "Stop command"
+        },
+        "pm2": {
+          "type": "string",
+          "description": "PM2 application name"
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Command timeout in milliseconds",
+          "minimum": 1000,
+          "maximum": 600000,
+          "default": 60000
+        }
+      },
+      "additionalProperties": false
+    },
+    "security": {
+      "type": "object",
+      "description": "Security-related settings",
+      "properties": {
+        "allowedPaths": {
+          "type": "array",
+          "description": "Additional allowed file paths (beyond workspace)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blockedPaths": {
+          "type": "array",
+          "description": "Explicitly blocked file paths",
+          "items": {
+            "type": "string"
+          }
+        },
+        "maxFileSize": {
+          "type": "integer",
+          "description": "Maximum file size in bytes",
+          "minimum": 1024,
+          "maximum": 104857600,
+          "default": 10485760
+        }
+      },
+      "additionalProperties": false
+    },
+    "strapi": {
+      "type": "object",
+      "description": "Strapi CMS integration settings",
+      "properties": {
+        "api": {
+          "type": "string",
+          "description": "Strapi API base URL",
+          "format": "uri"
+        },
+        "token": {
+          "type": "string",
+          "description": "Strapi API token",
+          "minLength": 10
+        },
+        "forceDraft": {
+          "type": "boolean",
+          "description": "Force all content to be created as drafts",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "logging": {
+      "type": "object",
+      "description": "Logging configuration",
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error"],
+          "default": "info"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["json", "text", "combined"],
+          "default": "text"
+        },
+        "maxFiles": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        },
+        "maxSize": {
+          "type": "string",
+          "pattern": "^[0-9]+(kb|mb|gb)$",
+          "default": "10mb"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

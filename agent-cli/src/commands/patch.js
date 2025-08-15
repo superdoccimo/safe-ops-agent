@@ -13,7 +13,8 @@ async function patchCmd(config, flags) {
     console.log(JSON.stringify({ ok: true, summary }, null, 2));
     if (flags.deploy) await deploy(config, flags);
   } else {
-    // print ops JSON to stdout
+    // Default: print ops JSON to stdout (dry-run mode)
+    console.log('[patch] Default dry-run mode - use --apply to execute changes');
     process.stdout.write(JSON.stringify(ops, null, 2) + '\n');
   }
 }

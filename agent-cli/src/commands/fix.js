@@ -13,7 +13,10 @@ async function fix(config, flags) {
     ops = JSON.parse(data);
   }
 
-  const dryRun = !!flags['dry-run'];
+  const dryRun = flags.apply ? false : true; // Default to dry-run unless --apply is specified
+  if (flags['dry-run'] !== undefined) {
+    dryRun = !!flags['dry-run']; // Override with explicit dry-run flag
+  }
   const summary = applyOps(ops, { dryRun });
   console.log(`[fix] wrote=${summary.wrote} deleted=${summary.deleted} mkdir=${summary.mkdir} errors=${summary.errors}`);
   if (dryRun && summary.details?.length) {

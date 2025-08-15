@@ -5,9 +5,38 @@ function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
+function safePath(targetPath, workspaceRoot) {
+  const resolved = path.resolve(targetPath);
+  const normalizedRoot = path.resolve(workspaceRoot);
+  
+  // Check if the path is within the workspace
+  const relative = path.relative(normalizedRoot, resolved);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`Security violation: Path outside workspace not allowed: ${targetPath}`);
+  }
+  
+  // Block system directories and sensitive paths
+  const blocked = [
+    '/etc', '/usr', '/var', '/bin', '/sbin', '/boot', '/root', '/home',
+    'C:\\Windows', 'C:\\Program Files', 'C:\\Users', '/System', '/Applications'
+  ];
+  
+  for (const blockedPath of blocked) {
+    if (resolved.toLowerCase().startsWith(blockedPath.toLowerCase())) {
+      throw new Error(`Security violation: System path not allowed: ${targetPath}`);
+    }
+  }
+  
+  return resolved;
+}
+
 function isSubPath(root, target) {
-  const rel = path.relative(root, target);
-  return !!rel && !rel.startsWith('..') && !path.isAbsolute(rel);
+  try {
+    safePath(target, root);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 function applyOps(ops, opts = {}) {
@@ -18,8 +47,7 @@ function applyOps(ops, opts = {}) {
   for (const op of ops || []) {
     try {
       const kind = op.op || op.type;
-      const p = path.resolve(cwd, op.path);
-      if (!isSubPath(cwd, p)) throw new Error(`Refuse to touch outside workspace: ${op.path}`);
+      const p = safePath(path.resolve(cwd, op.path), cwd);
 
       if (kind === 'write') {
         ensureDir(path.dirname(p));
@@ -53,5 +81,5 @@ function applyOps(ops, opts = {}) {
   return summary;
 }
 
-module.exports = { applyOps };
+module.exports = { applyOps, safePath };
 

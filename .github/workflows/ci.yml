@@ -46,7 +46,7 @@ jobs:
           cd agent-cli
           node bin/agent run-recipe --recipe ../examples/strapi/agent.yml --dry-run --format=json
       - name: Upload logs artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: logs
           path: logs

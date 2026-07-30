@@ -11,6 +11,18 @@ const { prefixSSH } = require('./lib/ssh');
 const { shCapture } = require('./lib/exec');
 
 const MAX_JSON_BODY_BYTES = 1024 * 1024;
+const DEFAULT_LOG_LINES = 200;
+const MAX_LOG_LINES = 1000;
+
+function parseLogLines(value) {
+  if (typeof value === 'undefined' || value === null || value === '') {
+    return DEFAULT_LOG_LINES;
+  }
+  if (!/^[1-9]\d*$/.test(value)) {
+    return DEFAULT_LOG_LINES;
+  }
+  return Math.min(Number(value), MAX_LOG_LINES);
+}
 
 function readJson(req, maxBytes = MAX_JSON_BODY_BYTES) {
   return new Promise((resolve, reject) => {
@@ -151,7 +163,7 @@ function createRequestHandler(config, flags, dependencies = {}) {
         const t = (config.targets || {})[targetName];
         if (!t) throw new Error(`target not found: ${targetName}`);
         const pm2 = (config.deploy && config.deploy.pm2) || t.pm2 || 'all';
-        const lines = parseInt(parsed.searchParams.get('lines') || '200', 10) || 200;
+        const lines = parseLogLines(parsed.searchParams.get('lines'));
         const cmd = `bash -lc "tail -n ${lines} ~/.pm2/logs/${pm2}-out.log; echo '--- STDERR ---'; tail -n ${lines} ~/.pm2/logs/${pm2}-error.log"`;
         const wrapped = prefixSSH(t, cmd);
         const { stdout } = shCapture(wrapped, {});
@@ -182,4 +194,10 @@ async function serve(config, flags, dependencies = {}) {
   });
 }
 
-module.exports = { serve, createRequestHandler, isApplyAllowed, isServerMutationAllowed };
+module.exports = {
+  serve,
+  createRequestHandler,
+  isApplyAllowed,
+  isServerMutationAllowed,
+  parseLogLines
+};

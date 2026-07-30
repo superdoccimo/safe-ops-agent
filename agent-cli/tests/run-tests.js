@@ -179,7 +179,11 @@ function testLogSymlinkSafety() {
 }
 
 function testServerApplyAuthorization() {
-  const { isApplyAllowed, isServerMutationAllowed } = require('../src/server');
+  const {
+    isApplyAllowed,
+    isServerMutationAllowed,
+    parseLogLines
+  } = require('../src/server');
 
   assert.equal(
     isApplyAllowed({}),
@@ -201,6 +205,12 @@ function testServerApplyAuthorization() {
     true,
     'should use the trusted apply opt-in for every server mutation'
   );
+  assert.equal(parseLogLines(undefined), 200, 'should preserve the default log line count');
+  assert.equal(parseLogLines('25'), 25, 'should accept a bounded positive integer');
+  assert.equal(parseLogLines('0'), 200, 'should reject zero log lines');
+  assert.equal(parseLogLines('-5'), 200, 'should reject negative log lines');
+  assert.equal(parseLogLines('25extra'), 200, 'should reject partial integer input');
+  assert.equal(parseLogLines('1000000'), 1000, 'should cap excessive log output');
 }
 
 async function invokeServerHandler(handler, { method, url, body = '', headers = {} }) {

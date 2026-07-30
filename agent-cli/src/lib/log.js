@@ -15,8 +15,40 @@ function tsFolder() {
 function ensureDir(p){ fs.mkdirSync(p, { recursive: true }); }
 
 function isSubPath(root, target) {
+  const normalizedRoot = path.resolve(root);
+  const resolvedTarget = path.resolve(target);
+  const rel = path.relative(normalizedRoot, resolvedTarget);
+  if (!rel || rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) {
+    return false;
+  }
+
+  try {
+    const realRoot = fs.realpathSync(normalizedRoot);
+    const realAncestor = fs.realpathSync(nearestExistingAncestor(resolvedTarget));
+    return isWithinOrEqual(realRoot, realAncestor);
+  } catch {
+    return false;
+  }
+}
+
+function isWithinOrEqual(root, target) {
   const rel = path.relative(root, target);
-  return !!rel && !rel.startsWith('..') && !path.isAbsolute(rel);
+  return rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+}
+
+function nearestExistingAncestor(target) {
+  let current = target;
+  while (true) {
+    try {
+      fs.lstatSync(current);
+      return current;
+    } catch (error) {
+      if (error.code !== 'ENOENT' && error.code !== 'ENOTDIR') throw error;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return current;
+    current = parent;
+  }
 }
 
 function createRunLogDir(base = 'logs') {
@@ -99,4 +131,3 @@ module.exports = {
   createLogEntry, 
   writeLogEntry 
 };
-

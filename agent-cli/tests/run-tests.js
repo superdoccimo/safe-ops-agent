@@ -198,12 +198,49 @@ function testServerApplyAuthorization() {
   );
 }
 
+async function testServerLoopbackBinding() {
+  const http = require('http');
+  const originalCreateServer = http.createServer;
+  const originalConsoleLog = console.log;
+  let listenArgs;
 
-console.log('Running tests...');
-testPatch();
-testPatchSymlinkReadSafety();
-testApplySafety();
-testApplySymlinkSafety();
-testLogSymlinkSafety();
-testServerApplyAuthorization();
-console.log('OK');
+  http.createServer = () => ({
+    listen(...args) {
+      listenArgs = args;
+      const callback = args.find((arg) => typeof arg === 'function');
+      if (callback) callback();
+    }
+  });
+  console.log = () => {};
+
+  try {
+    const { serve } = require('../src/server');
+    await serve({}, { port: 0 });
+    assert.equal(
+      listenArgs[1],
+      '127.0.0.1',
+      'should bind the local UI/API to loopback instead of every network interface'
+    );
+  } finally {
+    http.createServer = originalCreateServer;
+    console.log = originalConsoleLog;
+  }
+}
+
+
+async function main() {
+  console.log('Running tests...');
+  testPatch();
+  testPatchSymlinkReadSafety();
+  testApplySafety();
+  testApplySymlinkSafety();
+  testLogSymlinkSafety();
+  testServerApplyAuthorization();
+  await testServerLoopbackBinding();
+  console.log('OK');
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

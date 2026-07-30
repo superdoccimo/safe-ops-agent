@@ -121,7 +121,7 @@ async function serve(config, flags) {
     }
   });
 
-  server.listen(port, () => {
+  server.listen(port, '127.0.0.1', () => {
     console.log(`[serve] listening on http://127.0.0.1:${port}`);
   });
 }

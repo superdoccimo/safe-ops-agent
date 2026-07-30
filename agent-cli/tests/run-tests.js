@@ -178,6 +178,26 @@ function testLogSymlinkSafety() {
   }
 }
 
+function testServerApplyAuthorization() {
+  const { isApplyAllowed } = require('../src/server');
+
+  assert.equal(
+    isApplyAllowed({}),
+    false,
+    'should keep server apply disabled without trusted process configuration'
+  );
+  assert.equal(
+    isApplyAllowed({ forceApply: true }),
+    false,
+    'should not let an untrusted request body grant apply permission'
+  );
+  assert.equal(
+    isApplyAllowed({ ALLOW_APPLY: 'true' }),
+    true,
+    'should allow apply when trusted process configuration enables it'
+  );
+}
+
 
 console.log('Running tests...');
 testPatch();
@@ -185,4 +205,5 @@ testPatchSymlinkReadSafety();
 testApplySafety();
 testApplySymlinkSafety();
 testLogSymlinkSafety();
+testServerApplyAuthorization();
 console.log('OK');

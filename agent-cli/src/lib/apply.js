@@ -33,9 +33,15 @@ function safePath(targetPath, workspaceRoot) {
     '/etc', '/usr', '/var', '/bin', '/sbin', '/boot', '/root', '/home',
     'C:\\Windows', 'C:\\Program Files', 'C:\\Users', '/System', '/Applications'
   ];
+  const broadUserRoots = new Set(['/home', 'c:\\users']);
   
   for (const blockedPath of blocked) {
-    if (resolved.toLowerCase().startsWith(blockedPath.toLowerCase())) {
+    const normalizedBlocked = blockedPath.toLowerCase();
+    const normalizedResolved = resolved.toLowerCase();
+    const isExactRoot = normalizedResolved === normalizedBlocked;
+    const isBlockedDescendant = !broadUserRoots.has(normalizedBlocked)
+      && normalizedResolved.startsWith(`${normalizedBlocked}${path.sep}`);
+    if (isExactRoot || isBlockedDescendant) {
       throw new Error(`Security violation: System path not allowed: ${targetPath}`);
     }
   }

@@ -45,8 +45,24 @@ function testPatch() {
 }
 
 function testApplySafety() {
-  const { applyOps } = require('../src/lib/apply');
+  const { applyOps, safePath } = require('../src/lib/apply');
   const cwd = path.resolve(__dirname, '..', '..');
+  const inside = applyOps(
+    [{ op: 'write', path: 'tmp/inside.txt', content: 'x' }],
+    { cwd, dryRun: true }
+  );
+  assert.equal(
+    inside.wrote,
+    1,
+    'should allow a write inside a workspace nested below a broad user-home root'
+  );
+  if (process.platform !== 'win32' && fs.existsSync('/home')) {
+    assert.throws(
+      () => safePath('/home', '/home'),
+      /system path/i,
+      'should continue to reject the broad user-home root itself as a workspace target'
+    );
+  }
   let threw = false;
   try {
     applyOps([{ op: 'write', path: '../outside.txt', content: 'x' }], { cwd, dryRun: true });

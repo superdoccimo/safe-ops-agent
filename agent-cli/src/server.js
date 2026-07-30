@@ -1,5 +1,5 @@
 const http = require('http');
-const url = require('url');
+const { URL } = require('node:url');
 const fs = require('fs');
 const path = require('path');
 const { applyOps } = require('./lib/apply');
@@ -57,7 +57,7 @@ function createRequestHandler(config, flags, dependencies = {}) {
   const revalidateRequest = dependencies.revalidateRequest || executeRevalidateRequest;
 
   return async (req, res) => {
-    const parsed = url.parse(req.url, true);
+    const parsed = new URL(req.url, 'http://127.0.0.1');
     const p = parsed.pathname || '/';
     try {
       if (req.method === 'GET' && p === '/') {
@@ -103,14 +103,14 @@ function createRequestHandler(config, flags, dependencies = {}) {
           writeMutationDenied(res);
           return;
         }
-        const targetName = parsed.query.target || 'prod';
+        const targetName = parsed.searchParams.get('target') || 'prod';
         const logs = await deployRequest(config, targetName);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, logs }));
         return;
       }
       if (req.method === 'POST' && p === '/check') {
-        await hc(config, { target: parsed.query.target || 'prod', 'dry-run': !!flags['dry-run'] });
+        await hc(config, { target: parsed.searchParams.get('target') || 'prod', 'dry-run': !!flags['dry-run'] });
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
         return;
@@ -127,11 +127,11 @@ function createRequestHandler(config, flags, dependencies = {}) {
         return;
       }
       if (req.method === 'GET' && p === '/logs') {
-        const targetName = parsed.query.target || 'prod';
+        const targetName = parsed.searchParams.get('target') || 'prod';
         const t = (config.targets || {})[targetName];
         if (!t) throw new Error(`target not found: ${targetName}`);
         const pm2 = (config.deploy && config.deploy.pm2) || t.pm2 || 'all';
-        const lines = parseInt(parsed.query.lines || '200', 10) || 200;
+        const lines = parseInt(parsed.searchParams.get('lines') || '200', 10) || 200;
         const cmd = `bash -lc "tail -n ${lines} ~/.pm2/logs/${pm2}-out.log; echo '--- STDERR ---'; tail -n ${lines} ~/.pm2/logs/${pm2}-error.log"`;
         const wrapped = prefixSSH(t, cmd);
         const { stdout } = shCapture(wrapped, {});

@@ -44,7 +44,11 @@ function readJson(req, maxBytes = MAX_JSON_BODY_BYTES) {
     req.on('end', () => {
       if (settled) return;
       try { resolve(data ? JSON.parse(data) : {}); }
-      catch (e) { reject(e); }
+      catch (e) {
+        const error = new Error('invalid_json');
+        error.statusCode = 400;
+        reject(error);
+      }
     });
     req.on('error', (error) => {
       if (settled) return;
@@ -175,10 +179,14 @@ function createRequestHandler(config, flags, dependencies = {}) {
       res.end(JSON.stringify({ ok: false, error: 'not_found' }));
     } catch (e) {
       const invalidRequestTarget = e && e.code === 'ERR_INVALID_URL';
-      const statusCode = invalidRequestTarget ? 400 : (e.statusCode === 413 ? 413 : 500);
+      const statusCode = invalidRequestTarget
+        ? 400
+        : ([400, 413].includes(e.statusCode) ? e.statusCode : 500);
       const error = invalidRequestTarget
         ? 'invalid_request_target'
-        : (statusCode === 413 ? 'request_body_too_large' : String(e.message || e));
+        : (statusCode === 413
+          ? 'request_body_too_large'
+          : (statusCode === 400 ? 'invalid_json' : String(e.message || e)));
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error }));
     }

@@ -22,6 +22,10 @@ function readJson(req) {
   });
 }
 
+function isApplyAllowed(env = process.env) {
+  return env.ALLOW_APPLY === 'true';
+}
+
 async function serve(config, flags) {
   const port = Number(flags.port || 8787);
   const uiDir = path.resolve(__dirname, 'ui');
@@ -44,8 +48,7 @@ async function serve(config, flags) {
       }
       if (req.method === 'POST' && p === '/apply') {
         const body = await readJson(req);
-        // Check for explicit apply permission
-        const allowApply = process.env.ALLOW_APPLY === 'true' || body.forceApply === true;
+        const allowApply = isApplyAllowed();
         const dryRun = allowApply ? !!body.dryRun : true; // Default to dry-run unless explicitly allowed
         const ops = body.ops || body;
         const summary = applyOps(ops, { dryRun });
@@ -58,8 +61,7 @@ async function serve(config, flags) {
         const text = body.patch || '';
         const ops = unifiedToOps(text, process.cwd());
         if (body.apply) {
-          // Check for explicit apply permission
-          const allowApply = process.env.ALLOW_APPLY === 'true' || body.forceApply === true;
+          const allowApply = isApplyAllowed();
           const dryRun = allowApply ? !!body.dryRun : true; // Default to dry-run unless explicitly allowed
           const summary = applyOps(ops, { dryRun });
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -124,4 +126,4 @@ async function serve(config, flags) {
   });
 }
 
-module.exports = { serve };
+module.exports = { serve, isApplyAllowed };

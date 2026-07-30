@@ -374,6 +374,24 @@ async function testServerJsonBodyLimit() {
   );
 }
 
+async function testServerMalformedJson() {
+  const { createRequestHandler } = require('../src/server');
+  const handler = createRequestHandler({}, {}, {});
+
+  const response = await invokeServerHandler(handler, {
+    method: 'POST',
+    url: '/apply',
+    body: '{"ops":'
+  });
+
+  assert.equal(response.statusCode, 400, 'should reject malformed JSON as a client error');
+  assert.deepEqual(
+    JSON.parse(response.body),
+    { ok: false, error: 'invalid_json' },
+    'should return a bounded error without parser details or request content'
+  );
+}
+
 async function testServerLoopbackBinding() {
   const http = require('http');
   const originalCreateServer = http.createServer;
@@ -416,6 +434,7 @@ async function main() {
   await testServerUrlParsing();
   await testServerMalformedRequestTarget();
   await testServerJsonBodyLimit();
+  await testServerMalformedJson();
   await testServerLoopbackBinding();
   console.log('OK');
 }

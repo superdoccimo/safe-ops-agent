@@ -321,6 +321,32 @@ async function testServerUrlParsing() {
   );
 }
 
+async function testServerJsonBodyLimit() {
+  const { createRequestHandler } = require('../src/server');
+  const handler = createRequestHandler({}, {}, {
+    env: { ALLOW_APPLY: 'true' },
+    revalidateRequest: async () => {
+      assert.fail('an oversized request body must not reach the mutation implementation');
+    }
+  });
+  const oversizedBody = JSON.stringify({
+    path: `/${'x'.repeat((1024 * 1024) + 1)}`
+  });
+
+  const response = await invokeServerHandler(handler, {
+    method: 'POST',
+    url: '/revalidate',
+    body: oversizedBody
+  });
+
+  assert.equal(response.statusCode, 413, 'should reject an oversized JSON request body');
+  assert.deepEqual(
+    JSON.parse(response.body),
+    { ok: false, error: 'request_body_too_large' },
+    'should return a bounded error without reflecting request content'
+  );
+}
+
 async function testServerLoopbackBinding() {
   const http = require('http');
   const originalCreateServer = http.createServer;
@@ -361,6 +387,7 @@ async function main() {
   testServerApplyAuthorization();
   await testServerMutationAuthorization();
   await testServerUrlParsing();
+  await testServerJsonBodyLimit();
   await testServerLoopbackBinding();
   console.log('OK');
 }

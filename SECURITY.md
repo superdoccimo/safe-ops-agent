@@ -26,7 +26,7 @@ Please include:
 - **Absolute path blocking**: Rejects operations on absolute paths outside workspace
 
 ### API Security
-- **Server endpoints protected**: `/apply` and `/patch` endpoints require `ALLOW_APPLY=true` environment variable
+- **Server endpoints protected**: applying `/apply` and `/patch` writes and invoking `/deploy` or `/revalidate` require the trusted `ALLOW_APPLY=true` process environment opt-in
 - **Input validation**: All user inputs are validated and sanitized
 - **Error disclosure prevention**: Generic error messages to prevent information leakage
 
@@ -73,4 +73,3 @@ If you accidentally commit API keys or secrets:
 For security-related questions or concerns:
 - General: security@denebola.net
 - Emergency: Use GitHub Security Advisory for critical issues
-

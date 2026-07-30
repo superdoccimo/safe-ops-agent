@@ -3,7 +3,7 @@
 **THIS TOOL DEFAULTS TO DRY-RUN MODE FOR SAFETY**
 
 - **Files are NOT modified by default** - Use `--apply` flag to execute changes
-- **External network calls are disabled by default** - Set `ALLOW_APPLY=true` for server endpoints
+- **Server mutations are disabled by default** - Set `ALLOW_APPLY=true` to opt in to applying writes, deployment, and revalidation from server endpoints
 - **File operations are restricted to workspace directory only**
 - **All operations are logged for audit purposes**
 
@@ -71,7 +71,7 @@ node scripts/local_api_parity_test.js && sed -n '1,4p' logs/api-parity.txt
 
 ## 注意事項（Security & Safety）
 - **デフォルトはdry-runモード**: 明示的に `--apply` を指定しない限りファイルは変更されません
-- **外部ネットワーク呼び出しはデフォルトオフ**: サーバーエンドポイントは `ALLOW_APPLY=true` が必要
+- **サーバーからの変更操作はデフォルトオフ**: 書き込み、deploy、revalidate の明示的な許可には `ALLOW_APPLY=true` が必要
 - **ワークスペース外の書き込み拒否**: システムファイルや他プロジェクトへの誤操作を防止
 - **Strapi投稿は下書き固定**: `publishedAt` フィールドを除去し、公開前の人間レビューを必須化
 - パッチのrename検出は write+delete で再現（mode変更等は未対応）。

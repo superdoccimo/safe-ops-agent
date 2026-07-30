@@ -292,6 +292,35 @@ async function testServerMutationAuthorization() {
   assert.equal(revalidateCalls, 1);
 }
 
+async function testServerUrlParsing() {
+  const { createRequestHandler } = require('../src/server');
+  const deployTargets = [];
+  const handler = createRequestHandler({}, {}, {
+    env: { ALLOW_APPLY: 'true' },
+    deployRequest: async (_config, targetName) => {
+      deployTargets.push(targetName);
+      return [];
+    }
+  });
+
+  const repeatedTarget = await invokeServerHandler(handler, {
+    method: 'POST',
+    url: '/deploy?target=first&target=second'
+  });
+  const blankTarget = await invokeServerHandler(handler, {
+    method: 'POST',
+    url: '/deploy?target='
+  });
+
+  assert.equal(repeatedTarget.statusCode, 200, 'should route a request with repeated query values');
+  assert.equal(blankTarget.statusCode, 200, 'should route a request with a blank query value');
+  assert.deepEqual(
+    deployTargets,
+    ['first', 'prod'],
+    'should use the first repeated value and preserve the default for a blank value'
+  );
+}
+
 async function testServerLoopbackBinding() {
   const http = require('http');
   const originalCreateServer = http.createServer;
@@ -331,6 +360,7 @@ async function main() {
   testLogSymlinkSafety();
   testServerApplyAuthorization();
   await testServerMutationAuthorization();
+  await testServerUrlParsing();
   await testServerLoopbackBinding();
   console.log('OK');
 }

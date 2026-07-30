@@ -77,9 +77,9 @@ function createRequestHandler(config, flags, dependencies = {}) {
   const revalidateRequest = dependencies.revalidateRequest || executeRevalidateRequest;
 
   return async (req, res) => {
-    const parsed = new URL(req.url, 'http://127.0.0.1');
-    const p = parsed.pathname || '/';
     try {
+      const parsed = new URL(req.url, 'http://127.0.0.1');
+      const p = parsed.pathname || '/';
       if (req.method === 'GET' && p === '/') {
         const indexPath = path.join(uiDir, 'index.html');
         const html = fs.readFileSync(indexPath, 'utf8');
@@ -162,8 +162,11 @@ function createRequestHandler(config, flags, dependencies = {}) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: 'not_found' }));
     } catch (e) {
-      const statusCode = e.statusCode === 413 ? 413 : 500;
-      const error = statusCode === 413 ? 'request_body_too_large' : String(e.message || e);
+      const invalidRequestTarget = e && e.code === 'ERR_INVALID_URL';
+      const statusCode = invalidRequestTarget ? 400 : (e.statusCode === 413 ? 413 : 500);
+      const error = invalidRequestTarget
+        ? 'invalid_request_target'
+        : (statusCode === 413 ? 'request_body_too_large' : String(e.message || e));
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error }));
     }

@@ -10,15 +10,35 @@ const { revalidate } = require('./commands/revalidate');
 const { prefixSSH } = require('./lib/ssh');
 const { shCapture } = require('./lib/exec');
 
-function readJson(req) {
+const MAX_JSON_BODY_BYTES = 1024 * 1024;
+
+function readJson(req, maxBytes = MAX_JSON_BODY_BYTES) {
   return new Promise((resolve, reject) => {
     let data = '';
-    req.on('data', (c) => data += c);
+    let bytes = 0;
+    let settled = false;
+    req.on('data', (c) => {
+      if (settled) return;
+      bytes += Buffer.byteLength(c);
+      if (bytes > maxBytes) {
+        settled = true;
+        const error = new Error('request_body_too_large');
+        error.statusCode = 413;
+        reject(error);
+        return;
+      }
+      data += c;
+    });
     req.on('end', () => {
+      if (settled) return;
       try { resolve(data ? JSON.parse(data) : {}); }
       catch (e) { reject(e); }
     });
-    req.on('error', reject);
+    req.on('error', (error) => {
+      if (settled) return;
+      settled = true;
+      reject(error);
+    });
   });
 }
 
@@ -142,8 +162,10 @@ function createRequestHandler(config, flags, dependencies = {}) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: 'not_found' }));
     } catch (e) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: false, error: String(e.message || e) }));
+      const statusCode = e.statusCode === 413 ? 413 : 500;
+      const error = statusCode === 413 ? 'request_body_too_large' : String(e.message || e);
+      res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error }));
     }
   };
 }

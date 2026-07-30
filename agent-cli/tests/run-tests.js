@@ -95,9 +95,46 @@ function testApplySymlinkSafety() {
   }
 }
 
+function testLogSymlinkSafety() {
+  const { writeFileSafe } = require('../src/lib/log');
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'safe-ops-agent-log-'));
+  const workspace = path.join(fixtureRoot, 'workspace');
+  const outside = path.join(fixtureRoot, 'outside');
+  const inside = path.join(workspace, 'inside');
+  const previousCwd = process.cwd();
+  fs.mkdirSync(workspace);
+  fs.mkdirSync(outside);
+  fs.mkdirSync(inside);
+  fs.symlinkSync(inside, path.join(workspace, 'linked-inside'), 'dir');
+  fs.symlinkSync(outside, path.join(workspace, 'linked-outside'), 'dir');
+
+  try {
+    process.chdir(workspace);
+    writeFileSafe('linked-inside/inside.log', 'inside');
+    assert.equal(
+      fs.readFileSync(path.join(inside, 'inside.log'), 'utf8'),
+      'inside',
+      'should preserve log links that resolve inside the workspace'
+    );
+    assert.throws(
+      () => writeFileSafe('linked-outside/escaped.log', 'outside'),
+      /outside workspace|symbolic link/i,
+      'should refuse a log symlink that targets outside the workspace'
+    );
+    assert.ok(
+      !fs.existsSync(path.join(outside, 'escaped.log')),
+      'a rejected log symlink should not write outside the workspace'
+    );
+  } finally {
+    process.chdir(previousCwd);
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
 
 console.log('Running tests...');
 testPatch();
 testApplySafety();
 testApplySymlinkSafety();
+testLogSymlinkSafety();
 console.log('OK');

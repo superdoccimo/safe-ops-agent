@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { applyOps } = require('./lib/apply');
 const { unifiedToOps } = require('./lib/patch');
-const { deploy, getDeployCommands } = require('./commands/deploy');
+const { getDeployCommands } = require('./commands/deploy');
 const { check: hc } = require('./commands/check');
 const { revalidate } = require('./commands/revalidate');
 const { prefixSSH } = require('./lib/ssh');
@@ -22,15 +22,41 @@ function readJson(req) {
   });
 }
 
-function isApplyAllowed(env = process.env) {
+function isServerMutationAllowed(env = process.env) {
   return env.ALLOW_APPLY === 'true';
 }
 
-async function serve(config, flags) {
-  const port = Number(flags.port || 8787);
-  const uiDir = path.resolve(__dirname, 'ui');
+const isApplyAllowed = isServerMutationAllowed;
 
-  const server = http.createServer(async (req, res) => {
+async function executeDeployRequest(config, targetName) {
+  const t = (config.targets || {})[targetName];
+  if (!t) throw new Error(`target not found: ${targetName}`);
+  const cmds = getDeployCommands(config, t);
+  const logs = [];
+  for (const c of cmds) {
+    const wrapped = prefixSSH(t, c);
+    const { stdout = '', stderr = '' } = shCapture(wrapped, {});
+    logs.push({ cmd: c, stdout, stderr });
+  }
+  return logs;
+}
+
+async function executeRevalidateRequest(config, body) {
+  await revalidate(config, { slug: body.slug, path: body.path });
+}
+
+function writeMutationDenied(res) {
+  res.writeHead(403, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ ok: false, error: 'server_mutations_disabled' }));
+}
+
+function createRequestHandler(config, flags, dependencies = {}) {
+  const uiDir = path.resolve(__dirname, 'ui');
+  const serverEnv = dependencies.env || process.env;
+  const deployRequest = dependencies.deployRequest || executeDeployRequest;
+  const revalidateRequest = dependencies.revalidateRequest || executeRevalidateRequest;
+
+  return async (req, res) => {
     const parsed = url.parse(req.url, true);
     const p = parsed.pathname || '/';
     try {
@@ -48,7 +74,7 @@ async function serve(config, flags) {
       }
       if (req.method === 'POST' && p === '/apply') {
         const body = await readJson(req);
-        const allowApply = isApplyAllowed();
+        const allowApply = isServerMutationAllowed(serverEnv);
         const dryRun = allowApply ? !!body.dryRun : true; // Default to dry-run unless explicitly allowed
         const ops = body.ops || body;
         const summary = applyOps(ops, { dryRun });
@@ -61,7 +87,7 @@ async function serve(config, flags) {
         const text = body.patch || '';
         const ops = unifiedToOps(text, process.cwd());
         if (body.apply) {
-          const allowApply = isApplyAllowed();
+          const allowApply = isServerMutationAllowed(serverEnv);
           const dryRun = allowApply ? !!body.dryRun : true; // Default to dry-run unless explicitly allowed
           const summary = applyOps(ops, { dryRun });
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -73,16 +99,12 @@ async function serve(config, flags) {
         return;
       }
       if (req.method === 'POST' && p === '/deploy') {
-        const targetName = parsed.query.target || 'prod';
-        const t = (config.targets || {})[targetName];
-        if (!t) throw new Error(`target not found: ${targetName}`);
-        const cmds = getDeployCommands(config, t);
-        const logs = [];
-        for (const c of cmds) {
-          const wrapped = require('./lib/ssh').prefixSSH(t, c);
-          const { stdout = '', stderr = '' } = require('./lib/exec').shCapture(wrapped, {});
-          logs.push({ cmd: c, stdout, stderr });
+        if (!isServerMutationAllowed(serverEnv)) {
+          writeMutationDenied(res);
+          return;
         }
+        const targetName = parsed.query.target || 'prod';
+        const logs = await deployRequest(config, targetName);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, logs }));
         return;
@@ -94,8 +116,12 @@ async function serve(config, flags) {
         return;
       }
       if (req.method === 'POST' && p === '/revalidate') {
+        if (!isServerMutationAllowed(serverEnv)) {
+          writeMutationDenied(res);
+          return;
+        }
         const body = await readJson(req);
-        await revalidate(config, { slug: body.slug, path: body.path });
+        await revalidateRequest(config, body);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
         return;
@@ -119,11 +145,16 @@ async function serve(config, flags) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: String(e.message || e) }));
     }
-  });
+  };
+}
+
+async function serve(config, flags, dependencies = {}) {
+  const port = Number(flags.port || 8787);
+  const server = http.createServer(createRequestHandler(config, flags, dependencies));
 
   server.listen(port, '127.0.0.1', () => {
     console.log(`[serve] listening on http://127.0.0.1:${port}`);
   });
 }
 
-module.exports = { serve, isApplyAllowed };
+module.exports = { serve, createRequestHandler, isApplyAllowed, isServerMutationAllowed };

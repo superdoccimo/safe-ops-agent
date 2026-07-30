@@ -179,7 +179,7 @@ function testLogSymlinkSafety() {
 }
 
 function testServerApplyAuthorization() {
-  const { isApplyAllowed } = require('../src/server');
+  const { isApplyAllowed, isServerMutationAllowed } = require('../src/server');
 
   assert.equal(
     isApplyAllowed({}),
@@ -196,6 +196,100 @@ function testServerApplyAuthorization() {
     true,
     'should allow apply when trusted process configuration enables it'
   );
+  assert.equal(
+    isServerMutationAllowed({ ALLOW_APPLY: 'true' }),
+    true,
+    'should use the trusted apply opt-in for every server mutation'
+  );
+}
+
+async function invokeServerHandler(handler, { method, url, body = '', headers = {} }) {
+  const { Readable } = require('stream');
+  const req = Readable.from(body ? [body] : []);
+  req.method = method;
+  req.url = url;
+  req.headers = headers;
+
+  return new Promise((resolve, reject) => {
+    const response = {
+      statusCode: null,
+      headers: null,
+      writeHead(statusCode, headers) {
+        this.statusCode = statusCode;
+        this.headers = headers;
+      },
+      end(responseBody = '') {
+        resolve({
+          statusCode: this.statusCode,
+          headers: this.headers,
+          body: responseBody
+        });
+      }
+    };
+
+    Promise.resolve(handler(req, response)).catch(reject);
+  });
+}
+
+async function testServerMutationAuthorization() {
+  const { createRequestHandler } = require('../src/server');
+  let deployCalls = 0;
+  let revalidateCalls = 0;
+  const dependencies = {
+    env: {},
+    deployRequest: async () => {
+      deployCalls += 1;
+      return [];
+    },
+    revalidateRequest: async () => {
+      revalidateCalls += 1;
+    }
+  };
+  const handler = createRequestHandler({}, {}, dependencies);
+
+  const deployDenied = await invokeServerHandler(handler, {
+    method: 'POST',
+    url: '/deploy?target=prod&ALLOW_APPLY=true',
+    headers: { 'x-allow-apply': 'true' }
+  });
+  assert.equal(deployDenied.statusCode, 403);
+  assert.deepEqual(
+    JSON.parse(deployDenied.body),
+    { ok: false, error: 'server_mutations_disabled' },
+    'should return a bounded denial without deployment details'
+  );
+  assert.equal(deployCalls, 0, 'should not call the deployment implementation without trusted authorization');
+
+  const revalidateDenied = await invokeServerHandler(handler, {
+    method: 'POST',
+    url: '/revalidate',
+    body: JSON.stringify({ slug: 'synthetic', ALLOW_APPLY: 'true' })
+  });
+  assert.equal(revalidateDenied.statusCode, 403);
+  assert.deepEqual(
+    JSON.parse(revalidateDenied.body),
+    { ok: false, error: 'server_mutations_disabled' },
+    'should return a bounded denial without revalidation details'
+  );
+  assert.equal(revalidateCalls, 0, 'should not call the revalidation implementation without trusted authorization');
+
+  const authorizedHandler = createRequestHandler({}, {}, {
+    ...dependencies,
+    env: { ALLOW_APPLY: 'true' }
+  });
+  const deployAllowed = await invokeServerHandler(authorizedHandler, {
+    method: 'POST',
+    url: '/deploy?target=synthetic'
+  });
+  const revalidateAllowed = await invokeServerHandler(authorizedHandler, {
+    method: 'POST',
+    url: '/revalidate',
+    body: JSON.stringify({ path: '/synthetic' })
+  });
+  assert.equal(deployAllowed.statusCode, 200, 'should preserve explicitly authorized deployment behavior');
+  assert.equal(revalidateAllowed.statusCode, 200, 'should preserve explicitly authorized revalidation behavior');
+  assert.equal(deployCalls, 1);
+  assert.equal(revalidateCalls, 1);
 }
 
 async function testServerLoopbackBinding() {
@@ -236,6 +330,7 @@ async function main() {
   testApplySymlinkSafety();
   testLogSymlinkSafety();
   testServerApplyAuthorization();
+  await testServerMutationAuthorization();
   await testServerLoopbackBinding();
   console.log('OK');
 }

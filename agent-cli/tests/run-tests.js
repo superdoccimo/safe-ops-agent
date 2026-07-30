@@ -321,6 +321,23 @@ async function testServerUrlParsing() {
   );
 }
 
+async function testServerMalformedRequestTarget() {
+  const { createRequestHandler } = require('../src/server');
+  const handler = createRequestHandler({}, {}, {});
+
+  const response = await invokeServerHandler(handler, {
+    method: 'GET',
+    url: 'http://['
+  });
+
+  assert.equal(response.statusCode, 400, 'should reject a malformed request target');
+  assert.deepEqual(
+    JSON.parse(response.body),
+    { ok: false, error: 'invalid_request_target' },
+    'should return a bounded error without reflecting the request target'
+  );
+}
+
 async function testServerJsonBodyLimit() {
   const { createRequestHandler } = require('../src/server');
   const handler = createRequestHandler({}, {}, {
@@ -387,6 +404,7 @@ async function main() {
   testServerApplyAuthorization();
   await testServerMutationAuthorization();
   await testServerUrlParsing();
+  await testServerMalformedRequestTarget();
   await testServerJsonBodyLimit();
   await testServerLoopbackBinding();
   console.log('OK');

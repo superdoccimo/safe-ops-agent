@@ -44,6 +44,37 @@ function testPatch() {
   assert.equal(opsRen[0].path, 'tmp/newname.txt');
 }
 
+function testPatchSymlinkReadSafety() {
+  const { unifiedToOps } = require('../src/lib/patch');
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'safe-ops-agent-patch-'));
+  const workspace = path.join(fixtureRoot, 'workspace');
+  const outside = path.join(fixtureRoot, 'outside');
+  fs.mkdirSync(workspace);
+  fs.mkdirSync(outside);
+  fs.writeFileSync(path.join(outside, 'outside.txt'), 'synthetic outside content\n');
+  fs.symlinkSync(outside, path.join(workspace, 'linked-outside'), 'dir');
+
+  const diff = [
+    'diff --git a/linked-outside/outside.txt b/linked-outside/outside.txt',
+    '--- a/linked-outside/outside.txt',
+    '+++ b/linked-outside/outside.txt',
+    '@@ -1,1 +1,1 @@',
+    '-synthetic outside content',
+    '+changed',
+    ''
+  ].join('\n');
+
+  try {
+    assert.throws(
+      () => unifiedToOps(diff, workspace),
+      /outside workspace|symbolic link/i,
+      'should reject patch reads through an in-workspace symlink to an outside file'
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
 function testApplySafety() {
   const { applyOps, safePath } = require('../src/lib/apply');
   const cwd = path.resolve(__dirname, '..', '..');
@@ -150,6 +181,7 @@ function testLogSymlinkSafety() {
 
 console.log('Running tests...');
 testPatch();
+testPatchSymlinkReadSafety();
 testApplySafety();
 testApplySymlinkSafety();
 testLogSymlinkSafety();

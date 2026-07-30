@@ -1,6 +1,7 @@
 const assert = require('assert');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 function load(f){ return fs.readFileSync(path.resolve(__dirname, f), 'utf8'); }
 
@@ -53,8 +54,50 @@ function testApplySafety() {
   assert.ok(threw, 'should refuse outside workspace');
 }
 
+function testApplySymlinkSafety() {
+  const { applyOps } = require('../src/lib/apply');
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'safe-ops-agent-'));
+  const workspace = path.join(fixtureRoot, 'workspace');
+  const outside = path.join(fixtureRoot, 'outside');
+  const inside = path.join(workspace, 'inside');
+  const insideFile = path.join(inside, 'inside.txt');
+  const escapedFile = path.join(outside, 'escaped.txt');
+  fs.mkdirSync(workspace);
+  fs.mkdirSync(outside);
+  fs.mkdirSync(inside);
+  fs.symlinkSync(inside, path.join(workspace, 'linked-inside'), 'dir');
+  fs.symlinkSync(outside, path.join(workspace, 'linked-outside'), 'dir');
+
+  try {
+    applyOps(
+      [{ op: 'write', path: 'linked-inside/inside.txt', content: 'inside' }],
+      { cwd: workspace }
+    );
+    assert.equal(
+      fs.readFileSync(insideFile, 'utf8'),
+      'inside',
+      'should preserve symbolic links that resolve inside the workspace'
+    );
+    assert.throws(
+      () => applyOps(
+        [{ op: 'write', path: 'linked-outside/escaped.txt', content: 'x' }],
+        { cwd: workspace }
+      ),
+      /outside workspace|symbolic link/i,
+      'should refuse an in-workspace symlink that targets outside the workspace'
+    );
+    assert.ok(
+      !fs.existsSync(escapedFile),
+      'a rejected symlink escape should not write outside the workspace'
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
 
 console.log('Running tests...');
 testPatch();
 testApplySafety();
+testApplySymlinkSafety();
 console.log('OK');

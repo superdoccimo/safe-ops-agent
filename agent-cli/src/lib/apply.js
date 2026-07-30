@@ -10,9 +10,22 @@ function safePath(targetPath, workspaceRoot) {
   const normalizedRoot = path.resolve(workspaceRoot);
   
   // Check if the path is within the workspace
-  const relative = path.relative(normalizedRoot, resolved);
-  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+  if (!isWithin(normalizedRoot, resolved)) {
     throw new Error(`Security violation: Path outside workspace not allowed: ${targetPath}`);
+  }
+
+  // Existing symbolic-link ancestors must resolve inside the real workspace.
+  // Walking to the nearest existing ancestor preserves writes to new paths.
+  const realRoot = fs.realpathSync(normalizedRoot);
+  const existingAncestor = nearestExistingAncestor(resolved);
+  let realAncestor;
+  try {
+    realAncestor = fs.realpathSync(existingAncestor);
+  } catch {
+    throw new Error(`Security violation: Unresolvable symbolic link not allowed: ${targetPath}`);
+  }
+  if (!isWithin(realRoot, realAncestor)) {
+    throw new Error(`Security violation: Symbolic link outside workspace not allowed: ${targetPath}`);
   }
   
   // Block system directories and sensitive paths
@@ -28,6 +41,28 @@ function safePath(targetPath, workspaceRoot) {
   }
   
   return resolved;
+}
+
+function isWithin(root, target) {
+  const relative = path.relative(root, target);
+  return relative !== '..'
+    && !relative.startsWith(`..${path.sep}`)
+    && !path.isAbsolute(relative);
+}
+
+function nearestExistingAncestor(targetPath) {
+  let current = targetPath;
+  while (true) {
+    try {
+      fs.lstatSync(current);
+      return current;
+    } catch (error) {
+      if (error.code !== 'ENOENT' && error.code !== 'ENOTDIR') throw error;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return current;
+    current = parent;
+  }
 }
 
 function isSubPath(root, target) {
@@ -82,4 +117,3 @@ function applyOps(ops, opts = {}) {
 }
 
 module.exports = { applyOps, safePath };
-

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { safePath } = require('./apply');
 
 function stripPrefix(p){
   if (!p) return p;
@@ -110,7 +111,7 @@ function unifiedToOps(text, cwd = process.cwd()){
     let content = '';
     const hasChange = (f.hunks||[]).some(h => (h.lines||[]).some(ln => ln.tag === '+' || ln.tag === '-'));
     if (hasChange) {
-      const p = path.resolve(cwd, target);
+      const p = safePath(path.resolve(cwd, target), cwd);
       if (fs.existsSync(p)) {
         const orig = fs.readFileSync(p, 'utf8');
         content = applyHunksToContent(orig, f.hunks);
@@ -124,12 +125,12 @@ function unifiedToOps(text, cwd = process.cwd()){
       }
     } else if (a && b && a !== b) {
       // rename only (no changes)
-      const srcPath = path.resolve(cwd, a);
+      const srcPath = safePath(path.resolve(cwd, a), cwd);
       if (fs.existsSync(srcPath)) content = fs.readFileSync(srcPath, 'utf8');
       else content = '';
     } else {
       // no-op change; keep as-is
-      const p = path.resolve(cwd, target);
+      const p = safePath(path.resolve(cwd, target), cwd);
       if (fs.existsSync(p)) content = fs.readFileSync(p, 'utf8');
       else content = '';
     }

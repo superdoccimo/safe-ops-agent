@@ -1,9 +1,12 @@
 
 const { sh } = require('../lib/exec');
 const { prefixSSH } = require('../lib/ssh');
+const { getOwnTarget, resolveTarget } = require('../lib/target');
 
 async function check(config, flags) {
-  const t = (config.targets || {})[flags.target || 'prod'];
+  const t = flags.target
+    ? resolveTarget(config, flags.target)
+    : getOwnTarget(config, 'prod');
   const urls = (config.healthcheck && config.healthcheck.urls) || [];
   if (urls.length === 0) throw new Error('no healthcheck.urls configured');
 

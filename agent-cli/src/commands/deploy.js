@@ -1,6 +1,7 @@
 
 const { sh } = require('../lib/exec');
 const { prefixSSH } = require('../lib/ssh');
+const { resolveTarget } = require('../lib/target');
 
 function getDeployCommands(config, t) {
   return [
@@ -11,8 +12,7 @@ function getDeployCommands(config, t) {
 }
 
 async function deploy(config, flags) {
-  const t = (config.targets || {})[flags.target || 'prod'];
-  if (!t) throw new Error(`target not found: ${flags.target || 'prod'}`);
+  const t = resolveTarget(config, flags.target || 'prod');
 
   const cmds = getDeployCommands(config, t);
   for (const c of cmds) {

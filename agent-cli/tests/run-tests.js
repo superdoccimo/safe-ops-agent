@@ -213,14 +213,22 @@ function testServerApplyAuthorization() {
   assert.equal(parseLogLines('1000000'), 1000, 'should cap excessive log output');
 }
 
-async function invokeServerHandler(handler, { method, url, body = '', headers = {} }) {
+async function invokeServerHandler(handler, {
+  method,
+  url,
+  body = '',
+  headers = {},
+  abort = false
+}) {
   const { Readable } = require('stream');
-  const req = Readable.from(body ? [body] : []);
+  const req = abort
+    ? new Readable({ read() {} })
+    : Readable.from(body ? [body] : []);
   req.method = method;
   req.url = url;
   req.headers = headers;
 
-  return new Promise((resolve, reject) => {
+  const response = new Promise((resolve, reject) => {
     const response = {
       statusCode: null,
       headers: null,
@@ -239,6 +247,11 @@ async function invokeServerHandler(handler, { method, url, body = '', headers = 
 
     Promise.resolve(handler(req, response)).catch(reject);
   });
+
+  if (abort) {
+    process.nextTick(() => req.emit('aborted'));
+  }
+  return response;
 }
 
 async function testServerMutationAuthorization() {
@@ -392,6 +405,25 @@ async function testServerMalformedJson() {
   );
 }
 
+async function testServerAbortedJsonRequest() {
+  const { createRequestHandler } = require('../src/server');
+  const handler = createRequestHandler({}, {}, {});
+
+  const response = await invokeServerHandler(handler, {
+    method: 'POST',
+    url: '/apply',
+    body: '{"ops":',
+    abort: true
+  });
+
+  assert.equal(response.statusCode, 400, 'should settle an aborted JSON request as a client error');
+  assert.deepEqual(
+    JSON.parse(response.body),
+    { ok: false, error: 'request_aborted' },
+    'should return a bounded error without reflecting partial request content'
+  );
+}
+
 async function testServerLoopbackBinding() {
   const http = require('http');
   const originalCreateServer = http.createServer;
@@ -484,6 +516,7 @@ async function main() {
   await testServerMalformedRequestTarget();
   await testServerJsonBodyLimit();
   await testServerMalformedJson();
+  await testServerAbortedJsonRequest();
   await testServerLoopbackBinding();
   await testServerPortValidation();
   console.log('OK');

@@ -45,10 +45,18 @@ function readJson(req, maxBytes = MAX_JSON_BODY_BYTES) {
       if (settled) return;
       try { resolve(data ? JSON.parse(data) : {}); }
       catch (e) {
+        settled = true;
         const error = new Error('invalid_json');
         error.statusCode = 400;
         reject(error);
       }
+    });
+    req.on('aborted', () => {
+      if (settled) return;
+      settled = true;
+      const error = new Error('request_aborted');
+      error.statusCode = 400;
+      reject(error);
     });
     req.on('error', (error) => {
       if (settled) return;
@@ -204,7 +212,9 @@ function createRequestHandler(config, flags, dependencies = {}) {
         ? 'invalid_request_target'
         : (statusCode === 413
           ? 'request_body_too_large'
-          : (statusCode === 400 ? 'invalid_json' : String(e.message || e)));
+          : (statusCode === 400
+            ? (e.message === 'request_aborted' ? 'request_aborted' : 'invalid_json')
+            : String(e.message || e)));
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error }));
     }

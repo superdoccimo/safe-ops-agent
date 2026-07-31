@@ -635,7 +635,7 @@ async function testServerApplyOpsShape() {
     );
   }
 
-  for (const pathValue of [undefined, null, 42, {}, [], '']) {
+  for (const pathValue of [undefined, null, 42, {}, [], '', '   ', '\t\n']) {
     const entry = { op: 'mkdir' };
     if (pathValue !== undefined) entry.path = pathValue;
     const response = await invokeServerHandler(handler, {
@@ -644,7 +644,7 @@ async function testServerApplyOpsShape() {
       body: JSON.stringify({ ops: [entry] })
     });
 
-    assert.equal(response.statusCode, 400, 'should reject a missing, non-string, or empty operation path');
+    assert.equal(response.statusCode, 400, 'should reject a missing, non-string, empty, or blank operation path');
     assert.deepEqual(
       JSON.parse(response.body),
       { ok: false, error: 'invalid_ops' },

@@ -72,7 +72,9 @@ function readJson(req, maxBytes = MAX_JSON_BODY_BYTES) {
     req.on('error', (error) => {
       if (settled) return;
       settled = true;
-      reject(error);
+      const requestError = new Error('request_stream_error');
+      requestError.statusCode = 400;
+      reject(requestError);
     });
   });
 }
@@ -226,7 +228,9 @@ function createRequestHandler(config, flags, dependencies = {}) {
           : (statusCode === 400
             ? (e.message === 'request_aborted'
               ? 'request_aborted'
-              : (e.message === 'invalid_json_body' ? 'invalid_json_body' : 'invalid_json'))
+              : (e.message === 'request_stream_error'
+                ? 'request_stream_error'
+                : (e.message === 'invalid_json_body' ? 'invalid_json_body' : 'invalid_json')))
             : String(e.message || e)));
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error }));

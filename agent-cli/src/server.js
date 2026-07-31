@@ -233,6 +233,14 @@ function createRequestHandler(config, flags, dependencies = {}) {
           return;
         }
         const body = await readJson(req);
+        if (
+          (Object.prototype.hasOwnProperty.call(body, 'slug') && typeof body.slug !== 'string') ||
+          (Object.prototype.hasOwnProperty.call(body, 'path') && typeof body.path !== 'string')
+        ) {
+          const error = new Error('invalid_revalidate_payload');
+          error.statusCode = 400;
+          throw error;
+        }
         await revalidateRequest(config, body);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
@@ -279,7 +287,11 @@ function createRequestHandler(config, flags, dependencies = {}) {
                       ? 'invalid_patch'
                       : (e.message === 'invalid_apply'
                         ? 'invalid_apply'
-                        : (e.message === 'invalid_dry_run' ? 'invalid_dry_run' : 'invalid_json')))))))
+                        : (e.message === 'invalid_dry_run'
+                          ? 'invalid_dry_run'
+                          : (e.message === 'invalid_revalidate_payload'
+                            ? 'invalid_revalidate_payload'
+                            : 'invalid_json'))))))))
             : 'internal_server_error'))));
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error }));

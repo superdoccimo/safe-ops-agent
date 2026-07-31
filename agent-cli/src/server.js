@@ -175,6 +175,11 @@ function createRequestHandler(config, flags, dependencies = {}) {
       }
       if (req.method === 'POST' && p === '/patch') {
         const body = await readJson(req);
+        if (body.patch !== undefined && typeof body.patch !== 'string') {
+          const error = new Error('invalid_patch');
+          error.statusCode = 400;
+          throw error;
+        }
         const text = body.patch || '';
         const ops = unifiedToOps(text, process.cwd());
         if (body.apply) {
@@ -253,7 +258,9 @@ function createRequestHandler(config, flags, dependencies = {}) {
                 ? 'request_stream_error'
                 : (e.message === 'invalid_json_body'
                   ? 'invalid_json_body'
-                  : (e.message === 'invalid_ops' ? 'invalid_ops' : 'invalid_json'))))
+                  : (e.message === 'invalid_ops'
+                    ? 'invalid_ops'
+                    : (e.message === 'invalid_patch' ? 'invalid_patch' : 'invalid_json')))))
             : 'internal_server_error'))));
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error }));

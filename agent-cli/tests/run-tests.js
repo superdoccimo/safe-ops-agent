@@ -615,6 +615,37 @@ async function testServerApplyOpsShape() {
   );
 }
 
+async function testServerPatchPayloadShape() {
+  const { createRequestHandler } = require('../src/server');
+  const handler = createRequestHandler({}, {}, {});
+
+  for (const patch of [{}, [], 42, true, null]) {
+    const response = await invokeServerHandler(handler, {
+      method: 'POST',
+      url: '/patch',
+      body: JSON.stringify({ patch })
+    });
+
+    assert.equal(response.statusCode, 400, 'should reject a non-string patch value as a client error');
+    assert.deepEqual(
+      JSON.parse(response.body),
+      { ok: false, error: 'invalid_patch' },
+      'should return a bounded error without reflecting the patch value or runtime details'
+    );
+  }
+
+  for (const body of ['{}', '{"patch":""}']) {
+    const response = await invokeServerHandler(handler, {
+      method: 'POST',
+      url: '/patch',
+      body
+    });
+
+    assert.equal(response.statusCode, 200, 'should preserve omitted and empty string patch behavior');
+    assert.deepEqual(JSON.parse(response.body), { ok: true, ops: [] });
+  }
+}
+
 async function testServerInternalErrorRedaction() {
   const { createRequestHandler } = require('../src/server');
   const handler = createRequestHandler({
@@ -738,6 +769,7 @@ async function main() {
   await testServerAbortedJsonRequest();
   await testServerJsonStreamError();
   await testServerApplyOpsShape();
+  await testServerPatchPayloadShape();
   await testServerInternalErrorRedaction();
   await testServerLoopbackBinding();
   await testServerPortValidation();

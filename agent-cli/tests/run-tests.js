@@ -599,6 +599,21 @@ async function testServerApplyOpsShape() {
     );
   }
 
+  for (const entry of [null, 'synthetic', 42, true, []]) {
+    const response = await invokeServerHandler(handler, {
+      method: 'POST',
+      url: '/apply',
+      body: JSON.stringify({ ops: [entry] })
+    });
+
+    assert.equal(response.statusCode, 400, 'should reject a non-object ops entry as a client error');
+    assert.deepEqual(
+      JSON.parse(response.body),
+      { ok: false, error: 'invalid_ops' },
+      'should return a bounded error without reflecting the ops entry or runtime details'
+    );
+  }
+
   const validResponse = await invokeServerHandler(handler, {
     method: 'POST',
     url: '/apply',

@@ -739,6 +739,45 @@ async function testServerPatchPayloadShape() {
   }
 }
 
+async function testServerRevalidatePayloadShape() {
+  const { createRequestHandler } = require('../src/server');
+  const requests = [];
+  const handler = createRequestHandler({}, {}, {
+    env: { ALLOW_APPLY: 'true' },
+    revalidateRequest: async (_config, body) => {
+      requests.push(body);
+    }
+  });
+
+  for (const field of ['slug', 'path']) {
+    for (const value of [{}, [], 42, true, null]) {
+      const response = await invokeServerHandler(handler, {
+        method: 'POST',
+        url: '/revalidate',
+        body: JSON.stringify({ [field]: value })
+      });
+
+      assert.equal(response.statusCode, 400, `should reject a non-string revalidate ${field}`);
+      assert.deepEqual(
+        JSON.parse(response.body),
+        { ok: false, error: 'invalid_revalidate_payload' },
+        'should return a bounded error without reflecting the rejected value'
+      );
+      assert.equal(requests.length, 0, 'should reject invalid fields before revalidation');
+    }
+  }
+
+  for (const body of [{}, { slug: 'synthetic-slug' }, { path: '/synthetic-path' }]) {
+    const response = await invokeServerHandler(handler, {
+      method: 'POST',
+      url: '/revalidate',
+      body: JSON.stringify(body)
+    });
+    assert.equal(response.statusCode, 200, 'should preserve omitted and string fields');
+  }
+  assert.deepEqual(requests, [{}, { slug: 'synthetic-slug' }, { path: '/synthetic-path' }]);
+}
+
 async function testServerInternalErrorRedaction() {
   const { createRequestHandler } = require('../src/server');
   const handler = createRequestHandler({
@@ -863,6 +902,7 @@ async function main() {
   await testServerJsonStreamError();
   await testServerApplyOpsShape();
   await testServerPatchPayloadShape();
+  await testServerRevalidatePayloadShape();
   await testServerInternalErrorRedaction();
   await testServerLoopbackBinding();
   await testServerPortValidation();

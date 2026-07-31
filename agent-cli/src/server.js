@@ -166,7 +166,10 @@ function createRequestHandler(config, flags, dependencies = {}) {
           || body.ops.some((op) => {
             if (op === null || typeof op !== 'object' || Array.isArray(op)) return true;
             const kind = op.op || op.type;
-            return typeof kind !== 'string' || !APPLY_OP_KINDS.has(kind);
+            return typeof kind !== 'string'
+              || !APPLY_OP_KINDS.has(kind)
+              || typeof op.path !== 'string'
+              || op.path.length === 0;
           })
         ) {
           const error = new Error('invalid_ops');

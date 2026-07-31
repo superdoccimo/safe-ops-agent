@@ -568,6 +568,41 @@ async function testServerJsonStreamError() {
   );
 }
 
+async function testServerApplyOpsShape() {
+  const { createRequestHandler } = require('../src/server');
+  const handler = createRequestHandler({}, {}, {});
+
+  for (const ops of [{}, 'synthetic', 42, null]) {
+    const response = await invokeServerHandler(handler, {
+      method: 'POST',
+      url: '/apply',
+      body: JSON.stringify({ ops })
+    });
+
+    assert.equal(response.statusCode, 400, 'should reject a non-array ops value as a client error');
+    assert.deepEqual(
+      JSON.parse(response.body),
+      { ok: false, error: 'invalid_ops' },
+      'should return a bounded error without reflecting the ops value or runtime details'
+    );
+  }
+
+  const validResponse = await invokeServerHandler(handler, {
+    method: 'POST',
+    url: '/apply',
+    body: '{"ops":[]}'
+  });
+  assert.equal(validResponse.statusCode, 200, 'should preserve an array ops payload');
+  assert.deepEqual(
+    JSON.parse(validResponse.body),
+    {
+      ok: true,
+      summary: { wrote: 0, deleted: 0, mkdir: 0, errors: 0, details: [] },
+      dryRun: true
+    }
+  );
+}
+
 async function testServerInternalErrorRedaction() {
   const { createRequestHandler } = require('../src/server');
   const handler = createRequestHandler({
@@ -690,6 +725,7 @@ async function main() {
   await testServerJsonRootType();
   await testServerAbortedJsonRequest();
   await testServerJsonStreamError();
+  await testServerApplyOpsShape();
   await testServerInternalErrorRedaction();
   await testServerLoopbackBinding();
   await testServerPortValidation();

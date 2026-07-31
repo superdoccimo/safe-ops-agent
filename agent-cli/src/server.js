@@ -160,6 +160,11 @@ function createRequestHandler(config, flags, dependencies = {}) {
       }
       if (req.method === 'POST' && p === '/apply') {
         const body = await readJson(req);
+        if (Object.prototype.hasOwnProperty.call(body, 'ops') && !Array.isArray(body.ops)) {
+          const error = new Error('invalid_ops');
+          error.statusCode = 400;
+          throw error;
+        }
         const allowApply = isServerMutationAllowed(serverEnv);
         const dryRun = allowApply ? !!body.dryRun : true; // Default to dry-run unless explicitly allowed
         const ops = body.ops || body;
@@ -246,7 +251,9 @@ function createRequestHandler(config, flags, dependencies = {}) {
               ? 'request_aborted'
               : (e.message === 'request_stream_error'
                 ? 'request_stream_error'
-                : (e.message === 'invalid_json_body' ? 'invalid_json_body' : 'invalid_json')))
+                : (e.message === 'invalid_json_body'
+                  ? 'invalid_json_body'
+                  : (e.message === 'invalid_ops' ? 'invalid_ops' : 'invalid_json'))))
             : 'internal_server_error'))));
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error }));

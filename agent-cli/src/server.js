@@ -165,6 +165,11 @@ function createRequestHandler(config, flags, dependencies = {}) {
           error.statusCode = 400;
           throw error;
         }
+        if (Object.prototype.hasOwnProperty.call(body, 'dryRun') && typeof body.dryRun !== 'boolean') {
+          const error = new Error('invalid_dry_run');
+          error.statusCode = 400;
+          throw error;
+        }
         const allowApply = isServerMutationAllowed(serverEnv);
         const dryRun = allowApply ? !!body.dryRun : true; // Default to dry-run unless explicitly allowed
         const ops = body.ops || body;
@@ -182,6 +187,11 @@ function createRequestHandler(config, flags, dependencies = {}) {
         }
         if (Object.prototype.hasOwnProperty.call(body, 'apply') && typeof body.apply !== 'boolean') {
           const error = new Error('invalid_apply');
+          error.statusCode = 400;
+          throw error;
+        }
+        if (Object.prototype.hasOwnProperty.call(body, 'dryRun') && typeof body.dryRun !== 'boolean') {
+          const error = new Error('invalid_dry_run');
           error.statusCode = 400;
           throw error;
         }
@@ -267,7 +277,9 @@ function createRequestHandler(config, flags, dependencies = {}) {
                     ? 'invalid_ops'
                     : (e.message === 'invalid_patch'
                       ? 'invalid_patch'
-                      : (e.message === 'invalid_apply' ? 'invalid_apply' : 'invalid_json'))))))
+                      : (e.message === 'invalid_apply'
+                        ? 'invalid_apply'
+                        : (e.message === 'invalid_dry_run' ? 'invalid_dry_run' : 'invalid_json')))))))
             : 'internal_server_error'))));
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error }));

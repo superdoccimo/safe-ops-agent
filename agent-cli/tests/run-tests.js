@@ -613,6 +613,35 @@ async function testServerApplyOpsShape() {
       dryRun: true
     }
   );
+
+  const authorizedHandler = createRequestHandler({}, {}, {
+    env: { ALLOW_APPLY: 'true' }
+  });
+  for (const dryRun of ['false', 0, null, {}, []]) {
+    const response = await invokeServerHandler(authorizedHandler, {
+      method: 'POST',
+      url: '/apply',
+      body: JSON.stringify({ ops: [], dryRun })
+    });
+
+    assert.equal(response.statusCode, 400, 'should reject a non-boolean apply dryRun value');
+    assert.deepEqual(
+      JSON.parse(response.body),
+      { ok: false, error: 'invalid_dry_run' },
+      'should return a bounded error without reflecting the dryRun value'
+    );
+  }
+
+  for (const dryRun of [true, false]) {
+    const response = await invokeServerHandler(authorizedHandler, {
+      method: 'POST',
+      url: '/apply',
+      body: JSON.stringify({ ops: [], dryRun })
+    });
+
+    assert.equal(response.statusCode, 200, 'should preserve a boolean apply dryRun value');
+    assert.equal(JSON.parse(response.body).dryRun, dryRun);
+  }
 }
 
 async function testServerPatchPayloadShape() {
@@ -682,6 +711,32 @@ async function testServerPatchPayloadShape() {
     summary: { wrote: 0, deleted: 0, mkdir: 0, errors: 0, details: [] },
     dryRun: false
   });
+
+  for (const dryRun of ['false', 0, null, {}, []]) {
+    const response = await invokeServerHandler(authorizedHandler, {
+      method: 'POST',
+      url: '/patch',
+      body: JSON.stringify({ patch: '', apply: true, dryRun })
+    });
+
+    assert.equal(response.statusCode, 400, 'should reject a non-boolean patch dryRun value');
+    assert.deepEqual(
+      JSON.parse(response.body),
+      { ok: false, error: 'invalid_dry_run' },
+      'should return a bounded error without reflecting the dryRun value'
+    );
+  }
+
+  for (const dryRun of [true, false]) {
+    const response = await invokeServerHandler(authorizedHandler, {
+      method: 'POST',
+      url: '/patch',
+      body: JSON.stringify({ patch: '', apply: true, dryRun })
+    });
+
+    assert.equal(response.statusCode, 200, 'should preserve a boolean patch dryRun value');
+    assert.equal(JSON.parse(response.body).dryRun, dryRun);
+  }
 }
 
 async function testServerInternalErrorRedaction() {

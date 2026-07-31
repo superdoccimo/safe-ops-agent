@@ -827,15 +827,37 @@ async function testServerRevalidatePayloadShape() {
     }
   }
 
-  for (const body of [{}, { slug: 'synthetic-slug' }, { path: '/synthetic-path' }]) {
+  for (const body of [{}, { slug: '' }, { path: '   ' }, { slug: '\t', path: '\n' }]) {
     const response = await invokeServerHandler(handler, {
       method: 'POST',
       url: '/revalidate',
       body: JSON.stringify(body)
     });
-    assert.equal(response.statusCode, 200, 'should preserve omitted and string fields');
+    assert.equal(response.statusCode, 400, 'should require a non-empty revalidation selector');
+    assert.deepEqual(
+      JSON.parse(response.body),
+      { ok: false, error: 'invalid_revalidate_payload' }
+    );
+    assert.equal(requests.length, 0, 'should reject empty selectors before revalidation');
   }
-  assert.deepEqual(requests, [{}, { slug: 'synthetic-slug' }, { path: '/synthetic-path' }]);
+
+  for (const body of [
+    { slug: 'synthetic-slug' },
+    { path: '/synthetic-path' },
+    { slug: '', path: '/synthetic-path-with-empty-slug' }
+  ]) {
+    const response = await invokeServerHandler(handler, {
+      method: 'POST',
+      url: '/revalidate',
+      body: JSON.stringify(body)
+    });
+    assert.equal(response.statusCode, 200, 'should preserve non-empty string selectors');
+  }
+  assert.deepEqual(requests, [
+    { slug: 'synthetic-slug' },
+    { path: '/synthetic-path' },
+    { slug: '', path: '/synthetic-path-with-empty-slug' }
+  ]);
 }
 
 async function testServerInternalErrorRedaction() {

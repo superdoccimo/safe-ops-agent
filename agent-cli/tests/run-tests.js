@@ -217,7 +217,7 @@ async function invokeServerHandler(handler, {
   method,
   url,
   body = '',
-  headers = {},
+  headers,
   abort = false,
   streamError = null
 }) {
@@ -227,7 +227,9 @@ async function invokeServerHandler(handler, {
     : Readable.from(body ? [body] : []);
   req.method = method;
   req.url = url;
-  req.headers = headers;
+  req.headers = headers === undefined && method === 'POST'
+    ? { 'content-type': 'application/json' }
+    : (headers || {});
 
   const response = new Promise((resolve, reject) => {
     const response = {
@@ -408,6 +410,36 @@ async function testServerMalformedJson() {
   );
 }
 
+async function testServerJsonContentType() {
+  const { createRequestHandler } = require('../src/server');
+  const handler = createRequestHandler({}, {}, {});
+
+  for (const contentType of [undefined, 'text/plain', 'application/x-www-form-urlencoded']) {
+    const headers = contentType ? { 'content-type': contentType } : {};
+    const response = await invokeServerHandler(handler, {
+      method: 'POST',
+      url: '/apply',
+      body: '{"ops":[]}',
+      headers
+    });
+
+    assert.equal(response.statusCode, 415, 'should reject a non-JSON request content type');
+    assert.deepEqual(
+      JSON.parse(response.body),
+      { ok: false, error: 'unsupported_media_type' },
+      'should return a bounded error without reflecting the content type or request body'
+    );
+  }
+
+  const response = await invokeServerHandler(handler, {
+    method: 'POST',
+    url: '/apply',
+    body: '{"ops":[]}',
+    headers: { 'content-type': 'Application/JSON; Charset=UTF-8' }
+  });
+  assert.equal(response.statusCode, 200, 'should accept application/json with parameters case-insensitively');
+}
+
 async function testServerJsonRootType() {
   const { createRequestHandler } = require('../src/server');
   const handler = createRequestHandler({}, {}, {});
@@ -557,6 +589,7 @@ async function main() {
   await testServerMalformedRequestTarget();
   await testServerJsonBodyLimit();
   await testServerMalformedJson();
+  await testServerJsonContentType();
   await testServerJsonRootType();
   await testServerAbortedJsonRequest();
   await testServerJsonStreamError();

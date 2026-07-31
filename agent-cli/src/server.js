@@ -244,7 +244,7 @@ function createRequestHandler(config, flags, dependencies = {}) {
               : (e.message === 'request_stream_error'
                 ? 'request_stream_error'
                 : (e.message === 'invalid_json_body' ? 'invalid_json_body' : 'invalid_json')))
-            : String(e.message || e))));
+            : 'internal_server_error')));
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error }));
     }

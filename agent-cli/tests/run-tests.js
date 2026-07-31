@@ -421,6 +421,55 @@ async function testServerLoopbackBinding() {
   }
 }
 
+async function testServerPortValidation() {
+  const http = require('http');
+  const originalCreateServer = http.createServer;
+  const originalConsoleLog = console.log;
+  const listenPorts = [];
+  let createServerCalls = 0;
+
+  http.createServer = () => {
+    createServerCalls += 1;
+    return {
+      listen(port, host, callback) {
+        listenPorts.push(port);
+        if (callback) callback();
+      }
+    };
+  };
+  console.log = () => {};
+
+  try {
+    const { serve } = require('../src/server');
+    await serve({}, {});
+    await serve({}, { port: '' });
+    await serve({}, { port: 0 });
+    await serve({}, { port: '65535' });
+    assert.deepEqual(
+      listenPorts,
+      [8787, 8787, 0, 65535],
+      'should preserve the default and accept decimal integer ports from 0 through 65535'
+    );
+
+    for (const port of ['not-a-port', '1.5', '-1', '65536']) {
+      const callsBefore = createServerCalls;
+      await assert.rejects(
+        () => serve({}, { port }),
+        (error) => error.message === 'invalid_server_port',
+        'should return a stable error without reflecting the rejected port'
+      );
+      assert.equal(
+        createServerCalls,
+        callsBefore,
+        'should reject invalid ports before creating the server'
+      );
+    }
+  } finally {
+    http.createServer = originalCreateServer;
+    console.log = originalConsoleLog;
+  }
+}
+
 
 async function main() {
   console.log('Running tests...');
@@ -436,6 +485,7 @@ async function main() {
   await testServerJsonBodyLimit();
   await testServerMalformedJson();
   await testServerLoopbackBinding();
+  await testServerPortValidation();
   console.log('OK');
 }
 

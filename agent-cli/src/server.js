@@ -64,6 +64,24 @@ function isServerMutationAllowed(env = process.env) {
 
 const isApplyAllowed = isServerMutationAllowed;
 
+function parseServerPort(value) {
+  if (value === undefined || value === null || value === '') return 8787;
+
+  let port;
+  if (typeof value === 'number') {
+    port = value;
+  } else if (typeof value === 'string' && /^\d+$/.test(value)) {
+    port = Number(value);
+  } else {
+    throw new Error('invalid_server_port');
+  }
+
+  if (!Number.isInteger(port) || port < 0 || port > 65535) {
+    throw new Error('invalid_server_port');
+  }
+  return port;
+}
+
 async function executeDeployRequest(config, targetName) {
   const t = (config.targets || {})[targetName];
   if (!t) throw new Error(`target not found: ${targetName}`);
@@ -194,7 +212,7 @@ function createRequestHandler(config, flags, dependencies = {}) {
 }
 
 async function serve(config, flags, dependencies = {}) {
-  const port = Number(flags.port || 8787);
+  const port = parseServerPort(flags.port);
   const server = http.createServer(createRequestHandler(config, flags, dependencies));
 
   server.listen(port, '127.0.0.1', () => {
@@ -207,5 +225,6 @@ module.exports = {
   createRequestHandler,
   isApplyAllowed,
   isServerMutationAllowed,
+  parseServerPort,
   parseLogLines
 };

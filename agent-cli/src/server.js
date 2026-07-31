@@ -170,6 +170,7 @@ function createRequestHandler(config, flags, dependencies = {}) {
               || !APPLY_OP_KINDS.has(kind)
               || typeof op.path !== 'string'
               || op.path.trim().length === 0
+              || op.path.includes('\0')
               || (
                 kind === 'write'
                 && Object.prototype.hasOwnProperty.call(op, 'content')

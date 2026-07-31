@@ -572,6 +572,18 @@ async function testServerApplyOpsShape() {
   const { createRequestHandler } = require('../src/server');
   const handler = createRequestHandler({}, {}, {});
 
+  const missingOpsResponse = await invokeServerHandler(handler, {
+    method: 'POST',
+    url: '/apply',
+    body: '{}'
+  });
+  assert.equal(missingOpsResponse.statusCode, 400, 'should reject a missing ops value as a client error');
+  assert.deepEqual(
+    JSON.parse(missingOpsResponse.body),
+    { ok: false, error: 'invalid_ops' },
+    'should return a bounded error without reflecting request or runtime details'
+  );
+
   for (const ops of [{}, 'synthetic', 42, null]) {
     const response = await invokeServerHandler(handler, {
       method: 'POST',

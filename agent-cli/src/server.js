@@ -160,7 +160,10 @@ function createRequestHandler(config, flags, dependencies = {}) {
       }
       if (req.method === 'POST' && p === '/apply') {
         const body = await readJson(req);
-        if (!Array.isArray(body.ops)) {
+        if (
+          !Array.isArray(body.ops)
+          || body.ops.some((op) => op === null || typeof op !== 'object' || Array.isArray(op))
+        ) {
           const error = new Error('invalid_ops');
           error.statusCode = 400;
           throw error;

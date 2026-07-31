@@ -14,6 +14,7 @@ const { resolveTarget } = require('./lib/target');
 const MAX_JSON_BODY_BYTES = 1024 * 1024;
 const DEFAULT_LOG_LINES = 200;
 const MAX_LOG_LINES = 1000;
+const APPLY_OP_KINDS = new Set(['write', 'delete', 'mkdir']);
 
 function parseLogLines(value) {
   if (typeof value === 'undefined' || value === null || value === '') {
@@ -162,7 +163,11 @@ function createRequestHandler(config, flags, dependencies = {}) {
         const body = await readJson(req);
         if (
           !Array.isArray(body.ops)
-          || body.ops.some((op) => op === null || typeof op !== 'object' || Array.isArray(op))
+          || body.ops.some((op) => {
+            if (op === null || typeof op !== 'object' || Array.isArray(op)) return true;
+            const kind = op.op || op.type;
+            return typeof kind !== 'string' || !APPLY_OP_KINDS.has(kind);
+          })
         ) {
           const error = new Error('invalid_ops');
           error.statusCode = 400;

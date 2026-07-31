@@ -614,6 +614,27 @@ async function testServerApplyOpsShape() {
     );
   }
 
+  for (const entry of [
+    {},
+    { op: null, path: 'synthetic' },
+    { op: 42, path: 'synthetic' },
+    { op: 'unsupported', path: 'synthetic' },
+    { type: 'unsupported', path: 'synthetic' }
+  ]) {
+    const response = await invokeServerHandler(handler, {
+      method: 'POST',
+      url: '/apply',
+      body: JSON.stringify({ ops: [entry] })
+    });
+
+    assert.equal(response.statusCode, 400, 'should reject a missing or unsupported operation kind');
+    assert.deepEqual(
+      JSON.parse(response.body),
+      { ok: false, error: 'invalid_ops' },
+      'should return a bounded error without reflecting the operation kind'
+    );
+  }
+
   const validResponse = await invokeServerHandler(handler, {
     method: 'POST',
     url: '/apply',
@@ -628,6 +649,13 @@ async function testServerApplyOpsShape() {
       dryRun: true
     }
   );
+
+  const compatibleTypeResponse = await invokeServerHandler(handler, {
+    method: 'POST',
+    url: '/apply',
+    body: '{"ops":[{"type":"mkdir","path":"synthetic"}]}'
+  });
+  assert.equal(compatibleTypeResponse.statusCode, 200, 'should preserve the type compatibility alias');
 
   const authorizedHandler = createRequestHandler({}, {}, {
     env: { ALLOW_APPLY: 'true' }

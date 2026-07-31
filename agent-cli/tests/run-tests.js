@@ -497,6 +497,28 @@ async function testServerJsonStreamError() {
   );
 }
 
+async function testServerInternalErrorRedaction() {
+  const { createRequestHandler } = require('../src/server');
+  const handler = createRequestHandler({}, {}, {
+    env: { ALLOW_APPLY: 'true' },
+    deployRequest: async () => {
+      throw new Error('synthetic internal path /srv/private/config.json must not escape');
+    }
+  });
+
+  const response = await invokeServerHandler(handler, {
+    method: 'POST',
+    url: '/deploy?target=synthetic'
+  });
+
+  assert.equal(response.statusCode, 500, 'should preserve an internal server failure status');
+  assert.deepEqual(
+    JSON.parse(response.body),
+    { ok: false, error: 'internal_server_error' },
+    'should return a bounded error without reflecting internal failure details'
+  );
+}
+
 async function testServerLoopbackBinding() {
   const http = require('http');
   const originalCreateServer = http.createServer;
@@ -593,6 +615,7 @@ async function main() {
   await testServerJsonRootType();
   await testServerAbortedJsonRequest();
   await testServerJsonStreamError();
+  await testServerInternalErrorRedaction();
   await testServerLoopbackBinding();
   await testServerPortValidation();
   console.log('OK');

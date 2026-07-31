@@ -244,9 +244,13 @@ function createRequestHandler(config, flags, dependencies = {}) {
           return;
         }
         const body = await readJson(req);
+        const hasRevalidateSelector = ['slug', 'path'].some(
+          (field) => typeof body[field] === 'string' && body[field].trim() !== ''
+        );
         if (
           (Object.prototype.hasOwnProperty.call(body, 'slug') && typeof body.slug !== 'string') ||
-          (Object.prototype.hasOwnProperty.call(body, 'path') && typeof body.path !== 'string')
+          (Object.prototype.hasOwnProperty.call(body, 'path') && typeof body.path !== 'string') ||
+          !hasRevalidateSelector
         ) {
           const error = new Error('invalid_revalidate_payload');
           error.statusCode = 400;

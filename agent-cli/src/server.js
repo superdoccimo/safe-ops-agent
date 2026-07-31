@@ -180,6 +180,11 @@ function createRequestHandler(config, flags, dependencies = {}) {
           error.statusCode = 400;
           throw error;
         }
+        if (Object.prototype.hasOwnProperty.call(body, 'apply') && typeof body.apply !== 'boolean') {
+          const error = new Error('invalid_apply');
+          error.statusCode = 400;
+          throw error;
+        }
         const text = body.patch || '';
         const ops = unifiedToOps(text, process.cwd());
         if (body.apply) {
@@ -260,7 +265,9 @@ function createRequestHandler(config, flags, dependencies = {}) {
                   ? 'invalid_json_body'
                   : (e.message === 'invalid_ops'
                     ? 'invalid_ops'
-                    : (e.message === 'invalid_patch' ? 'invalid_patch' : 'invalid_json')))))
+                    : (e.message === 'invalid_patch'
+                      ? 'invalid_patch'
+                      : (e.message === 'invalid_apply' ? 'invalid_apply' : 'invalid_json'))))))
             : 'internal_server_error'))));
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error }));

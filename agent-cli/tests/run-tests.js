@@ -644,6 +644,44 @@ async function testServerPatchPayloadShape() {
     assert.equal(response.statusCode, 200, 'should preserve omitted and empty string patch behavior');
     assert.deepEqual(JSON.parse(response.body), { ok: true, ops: [] });
   }
+
+  const authorizedHandler = createRequestHandler({}, {}, {
+    env: { ALLOW_APPLY: 'true' }
+  });
+  for (const apply of ['false', 1, {}, [], null]) {
+    const response = await invokeServerHandler(authorizedHandler, {
+      method: 'POST',
+      url: '/patch',
+      body: JSON.stringify({ patch: '', apply })
+    });
+
+    assert.equal(response.statusCode, 400, 'should reject a non-boolean apply value as a client error');
+    assert.deepEqual(
+      JSON.parse(response.body),
+      { ok: false, error: 'invalid_apply' },
+      'should return a bounded error without reflecting the apply value or runtime details'
+    );
+  }
+
+  const falseResponse = await invokeServerHandler(authorizedHandler, {
+    method: 'POST',
+    url: '/patch',
+    body: '{"patch":"","apply":false}'
+  });
+  assert.equal(falseResponse.statusCode, 200, 'should preserve an explicit false apply value');
+  assert.deepEqual(JSON.parse(falseResponse.body), { ok: true, ops: [] });
+
+  const trueResponse = await invokeServerHandler(authorizedHandler, {
+    method: 'POST',
+    url: '/patch',
+    body: '{"patch":"","apply":true}'
+  });
+  assert.equal(trueResponse.statusCode, 200, 'should preserve an explicit true apply value');
+  assert.deepEqual(JSON.parse(trueResponse.body), {
+    ok: true,
+    summary: { wrote: 0, deleted: 0, mkdir: 0, errors: 0, details: [] },
+    dryRun: false
+  });
 }
 
 async function testServerInternalErrorRedaction() {

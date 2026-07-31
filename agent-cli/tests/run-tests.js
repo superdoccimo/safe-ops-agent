@@ -213,6 +213,30 @@ function testServerApplyAuthorization() {
   assert.equal(parseLogLines('1000000'), 1000, 'should cap excessive log output');
 }
 
+function testOwnTargetResolution() {
+  const { getOwnTarget, resolveTarget } = require('../src/lib/target');
+  const prod = { host: 'synthetic.example', pm2: 'synthetic-app' };
+  const config = { targets: { prod } };
+
+  assert.strictEqual(
+    resolveTarget(config, 'prod'),
+    prod,
+    'should preserve lookup of an explicitly configured own target'
+  );
+  for (const inheritedName of ['__proto__', 'constructor', 'toString']) {
+    assert.equal(
+      getOwnTarget(config, inheritedName),
+      null,
+      'an optional target lookup should not return an inherited property'
+    );
+    assert.throws(
+      () => resolveTarget(config, inheritedName),
+      (error) => error.code === 'TARGET_NOT_FOUND' && error.message === 'target_not_found',
+      'should reject inherited target names with a stable bounded error'
+    );
+  }
+}
+
 async function invokeServerHandler(handler, {
   method,
   url,
@@ -273,7 +297,8 @@ async function testServerMutationAuthorization() {
       revalidateCalls += 1;
     }
   };
-  const handler = createRequestHandler({}, {}, dependencies);
+  const config = { targets: { synthetic: { host: 'synthetic.example' } } };
+  const handler = createRequestHandler(config, {}, dependencies);
 
   const deployDenied = await invokeServerHandler(handler, {
     method: 'POST',
@@ -301,7 +326,7 @@ async function testServerMutationAuthorization() {
   );
   assert.equal(revalidateCalls, 0, 'should not call the revalidation implementation without trusted authorization');
 
-  const authorizedHandler = createRequestHandler({}, {}, {
+  const authorizedHandler = createRequestHandler(config, {}, {
     ...dependencies,
     env: { ALLOW_APPLY: 'true' }
   });
@@ -320,10 +345,56 @@ async function testServerMutationAuthorization() {
   assert.equal(revalidateCalls, 1);
 }
 
+async function testServerInheritedTargetNames() {
+  const { createRequestHandler } = require('../src/server');
+  let deployCalls = 0;
+  const handler = createRequestHandler(
+    { targets: { prod: { host: 'synthetic.example' } } },
+    {},
+    {
+      env: { ALLOW_APPLY: 'true' },
+      deployRequest: async () => {
+        deployCalls += 1;
+        return [];
+      }
+    }
+  );
+
+  for (const inheritedName of ['__proto__', 'constructor']) {
+    const deployResponse = await invokeServerHandler(handler, {
+      method: 'POST',
+      url: `/deploy?target=${encodeURIComponent(inheritedName)}`
+    });
+    assert.equal(deployResponse.statusCode, 400);
+    assert.deepEqual(
+      JSON.parse(deployResponse.body),
+      { ok: false, error: 'target_not_found' },
+      'should reject inherited deployment targets without reflecting target details'
+    );
+
+    const logsResponse = await invokeServerHandler(handler, {
+      method: 'GET',
+      url: `/logs?target=${encodeURIComponent(inheritedName)}`
+    });
+    assert.equal(logsResponse.statusCode, 400);
+    assert.deepEqual(
+      JSON.parse(logsResponse.body),
+      { ok: false, error: 'target_not_found' },
+      'should reject inherited log targets before command construction'
+    );
+  }
+  assert.equal(deployCalls, 0, 'should reject inherited targets before deployment execution');
+}
+
 async function testServerUrlParsing() {
   const { createRequestHandler } = require('../src/server');
   const deployTargets = [];
-  const handler = createRequestHandler({}, {}, {
+  const handler = createRequestHandler({
+    targets: {
+      first: { host: 'first.synthetic.example' },
+      prod: { host: 'prod.synthetic.example' }
+    }
+  }, {}, {
     env: { ALLOW_APPLY: 'true' },
     deployRequest: async (_config, targetName) => {
       deployTargets.push(targetName);
@@ -499,7 +570,9 @@ async function testServerJsonStreamError() {
 
 async function testServerInternalErrorRedaction() {
   const { createRequestHandler } = require('../src/server');
-  const handler = createRequestHandler({}, {}, {
+  const handler = createRequestHandler({
+    targets: { synthetic: { host: 'synthetic.example' } }
+  }, {}, {
     env: { ALLOW_APPLY: 'true' },
     deployRequest: async () => {
       throw new Error('synthetic internal path /srv/private/config.json must not escape');
@@ -606,7 +679,9 @@ async function main() {
   testApplySymlinkSafety();
   testLogSymlinkSafety();
   testServerApplyAuthorization();
+  testOwnTargetResolution();
   await testServerMutationAuthorization();
+  await testServerInheritedTargetNames();
   await testServerUrlParsing();
   await testServerMalformedRequestTarget();
   await testServerJsonBodyLimit();

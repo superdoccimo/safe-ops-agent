@@ -5,12 +5,7 @@ const { check } = require('../commands/check');
 const { revalidate } = require('../commands/revalidate');
 const { resolveRevalidate } = require('../adapters/next');
 const { maskObject, maskString } = require('../lib/mask');
-
-function resolveTarget(config, name) {
-  const t = (config.targets || {})[name] || (config.targets || {}).prod || null;
-  if (!t) throw new Error(`target not found: ${name}`);
-  return t;
-}
+const { resolveTarget } = require('../lib/target');
 
 function plan(recipe, config) {
   const targetName = recipe.target || 'prod';

@@ -9,6 +9,7 @@ const { check: hc } = require('./commands/check');
 const { revalidate } = require('./commands/revalidate');
 const { prefixSSH } = require('./lib/ssh');
 const { shCapture } = require('./lib/exec');
+const { resolveTarget } = require('./lib/target');
 
 const MAX_JSON_BODY_BYTES = 1024 * 1024;
 const DEFAULT_LOG_LINES = 200;
@@ -115,8 +116,7 @@ function parseServerPort(value) {
 }
 
 async function executeDeployRequest(config, targetName) {
-  const t = (config.targets || {})[targetName];
-  if (!t) throw new Error(`target not found: ${targetName}`);
+  const t = resolveTarget(config, targetName);
   const cmds = getDeployCommands(config, t);
   const logs = [];
   for (const c of cmds) {
@@ -190,6 +190,7 @@ function createRequestHandler(config, flags, dependencies = {}) {
           return;
         }
         const targetName = parsed.searchParams.get('target') || 'prod';
+        resolveTarget(config, targetName);
         const logs = await deployRequest(config, targetName);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, logs }));
@@ -214,8 +215,7 @@ function createRequestHandler(config, flags, dependencies = {}) {
       }
       if (req.method === 'GET' && p === '/logs') {
         const targetName = parsed.searchParams.get('target') || 'prod';
-        const t = (config.targets || {})[targetName];
-        if (!t) throw new Error(`target not found: ${targetName}`);
+        const t = resolveTarget(config, targetName);
         const pm2 = (config.deploy && config.deploy.pm2) || t.pm2 || 'all';
         const lines = parseLogLines(parsed.searchParams.get('lines'));
         const cmd = `bash -lc "tail -n ${lines} ~/.pm2/logs/${pm2}-out.log; echo '--- STDERR ---'; tail -n ${lines} ~/.pm2/logs/${pm2}-error.log"`;
@@ -229,12 +229,15 @@ function createRequestHandler(config, flags, dependencies = {}) {
       res.end(JSON.stringify({ ok: false, error: 'not_found' }));
     } catch (e) {
       const invalidRequestTarget = e && e.code === 'ERR_INVALID_URL';
+      const targetNotFound = e && e.code === 'TARGET_NOT_FOUND';
       const statusCode = invalidRequestTarget
         ? 400
-        : ([400, 413, 415].includes(e.statusCode) ? e.statusCode : 500);
+        : (targetNotFound ? 400 : ([400, 413, 415].includes(e.statusCode) ? e.statusCode : 500));
       const error = invalidRequestTarget
         ? 'invalid_request_target'
-        : (statusCode === 415
+        : (targetNotFound
+          ? 'target_not_found'
+          : (statusCode === 415
           ? 'unsupported_media_type'
           : (statusCode === 413
           ? 'request_body_too_large'
@@ -244,7 +247,7 @@ function createRequestHandler(config, flags, dependencies = {}) {
               : (e.message === 'request_stream_error'
                 ? 'request_stream_error'
                 : (e.message === 'invalid_json_body' ? 'invalid_json_body' : 'invalid_json')))
-            : 'internal_server_error')));
+            : 'internal_server_error'))));
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error }));
     }

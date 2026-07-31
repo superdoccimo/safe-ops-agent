@@ -64,7 +64,7 @@ function readJson(req, maxBytes = MAX_JSON_BODY_BYTES) {
         reject(error);
         return;
       }
-      if (body === null || typeof body !== 'object') {
+      if (body === null || typeof body !== 'object' || Array.isArray(body)) {
         settled = true;
         const error = new Error('invalid_json_body');
         error.statusCode = 400;

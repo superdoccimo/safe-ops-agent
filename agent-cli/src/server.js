@@ -26,6 +26,17 @@ function parseLogLines(value) {
 
 function readJson(req, maxBytes = MAX_JSON_BODY_BYTES) {
   return new Promise((resolve, reject) => {
+    const contentType = String((req.headers && req.headers['content-type']) || '')
+      .split(';', 1)[0]
+      .trim()
+      .toLowerCase();
+    if (contentType !== 'application/json') {
+      const error = new Error('unsupported_media_type');
+      error.statusCode = 415;
+      reject(error);
+      return;
+    }
+
     let data = '';
     let bytes = 0;
     let settled = false;
@@ -220,10 +231,12 @@ function createRequestHandler(config, flags, dependencies = {}) {
       const invalidRequestTarget = e && e.code === 'ERR_INVALID_URL';
       const statusCode = invalidRequestTarget
         ? 400
-        : ([400, 413].includes(e.statusCode) ? e.statusCode : 500);
+        : ([400, 413, 415].includes(e.statusCode) ? e.statusCode : 500);
       const error = invalidRequestTarget
         ? 'invalid_request_target'
-        : (statusCode === 413
+        : (statusCode === 415
+          ? 'unsupported_media_type'
+          : (statusCode === 413
           ? 'request_body_too_large'
           : (statusCode === 400
             ? (e.message === 'request_aborted'
@@ -231,7 +244,7 @@ function createRequestHandler(config, flags, dependencies = {}) {
               : (e.message === 'request_stream_error'
                 ? 'request_stream_error'
                 : (e.message === 'invalid_json_body' ? 'invalid_json_body' : 'invalid_json')))
-            : String(e.message || e)));
+            : String(e.message || e))));
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error }));
     }

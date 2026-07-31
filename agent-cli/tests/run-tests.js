@@ -405,6 +405,26 @@ async function testServerMalformedJson() {
   );
 }
 
+async function testServerJsonRootType() {
+  const { createRequestHandler } = require('../src/server');
+  const handler = createRequestHandler({}, {}, {});
+
+  for (const body of ['null', 'true', '42', '"synthetic"']) {
+    const response = await invokeServerHandler(handler, {
+      method: 'POST',
+      url: '/patch',
+      body
+    });
+
+    assert.equal(response.statusCode, 400, 'should reject a scalar JSON request body');
+    assert.deepEqual(
+      JSON.parse(response.body),
+      { ok: false, error: 'invalid_json_body' },
+      'should return a bounded error without reflecting the JSON value or runtime details'
+    );
+  }
+}
+
 async function testServerAbortedJsonRequest() {
   const { createRequestHandler } = require('../src/server');
   const handler = createRequestHandler({}, {}, {});
@@ -516,6 +536,7 @@ async function main() {
   await testServerMalformedRequestTarget();
   await testServerJsonBodyLimit();
   await testServerMalformedJson();
+  await testServerJsonRootType();
   await testServerAbortedJsonRequest();
   await testServerLoopbackBinding();
   await testServerPortValidation();

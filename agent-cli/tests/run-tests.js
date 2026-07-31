@@ -635,6 +635,23 @@ async function testServerApplyOpsShape() {
     );
   }
 
+  for (const pathValue of [undefined, null, 42, {}, [], '']) {
+    const entry = { op: 'mkdir' };
+    if (pathValue !== undefined) entry.path = pathValue;
+    const response = await invokeServerHandler(handler, {
+      method: 'POST',
+      url: '/apply',
+      body: JSON.stringify({ ops: [entry] })
+    });
+
+    assert.equal(response.statusCode, 400, 'should reject a missing, non-string, or empty operation path');
+    assert.deepEqual(
+      JSON.parse(response.body),
+      { ok: false, error: 'invalid_ops' },
+      'should return a bounded error without reflecting the operation path'
+    );
+  }
+
   const validResponse = await invokeServerHandler(handler, {
     method: 'POST',
     url: '/apply',

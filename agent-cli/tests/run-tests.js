@@ -515,14 +515,14 @@ async function testServerJsonRootType() {
   const { createRequestHandler } = require('../src/server');
   const handler = createRequestHandler({}, {}, {});
 
-  for (const body of ['null', 'true', '42', '"synthetic"']) {
+  for (const body of ['null', 'true', '42', '"synthetic"', '[]', '[{"op":"mkdir","path":"synthetic"}]']) {
     const response = await invokeServerHandler(handler, {
       method: 'POST',
       url: '/patch',
       body
     });
 
-    assert.equal(response.statusCode, 400, 'should reject a scalar JSON request body');
+    assert.equal(response.statusCode, 400, 'should reject a non-object JSON request body');
     assert.deepEqual(
       JSON.parse(response.body),
       { ok: false, error: 'invalid_json_body' },

@@ -169,7 +169,12 @@ function createRequestHandler(config, flags, dependencies = {}) {
             return typeof kind !== 'string'
               || !APPLY_OP_KINDS.has(kind)
               || typeof op.path !== 'string'
-              || op.path.length === 0;
+              || op.path.length === 0
+              || (
+                kind === 'write'
+                && Object.prototype.hasOwnProperty.call(op, 'content')
+                && typeof op.content !== 'string'
+              );
           })
         ) {
           const error = new Error('invalid_ops');

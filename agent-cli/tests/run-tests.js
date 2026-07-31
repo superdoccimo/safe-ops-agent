@@ -652,6 +652,21 @@ async function testServerApplyOpsShape() {
     );
   }
 
+  for (const content of [null, 42, true, {}, []]) {
+    const response = await invokeServerHandler(handler, {
+      method: 'POST',
+      url: '/apply',
+      body: JSON.stringify({ ops: [{ op: 'write', path: 'synthetic', content }] })
+    });
+
+    assert.equal(response.statusCode, 400, 'should reject a non-string write operation content value');
+    assert.deepEqual(
+      JSON.parse(response.body),
+      { ok: false, error: 'invalid_ops' },
+      'should return a bounded error without reflecting the write content value'
+    );
+  }
+
   const validResponse = await invokeServerHandler(handler, {
     method: 'POST',
     url: '/apply',
@@ -673,6 +688,18 @@ async function testServerApplyOpsShape() {
     body: '{"ops":[{"type":"mkdir","path":"synthetic"}]}'
   });
   assert.equal(compatibleTypeResponse.statusCode, 200, 'should preserve the type compatibility alias');
+
+  for (const entry of [
+    { op: 'write', path: 'synthetic-omitted-content' },
+    { op: 'write', path: 'synthetic-string-content', content: 'synthetic' }
+  ]) {
+    const response = await invokeServerHandler(handler, {
+      method: 'POST',
+      url: '/apply',
+      body: JSON.stringify({ ops: [entry] })
+    });
+    assert.equal(response.statusCode, 200, 'should preserve omitted and string write content values');
+  }
 
   const authorizedHandler = createRequestHandler({}, {}, {
     env: { ALLOW_APPLY: 'true' }

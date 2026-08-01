@@ -147,6 +147,27 @@ function testApplyOperationsCollection() {
   );
 }
 
+function testApplyOperationPaths() {
+  const { applyOps } = require('../src/lib/apply');
+  const cwd = path.resolve(__dirname, '..', '..');
+
+  for (const pathValue of [undefined, null, 42, {}, [], '', '   ', '\t\n', 'synthetic\0path']) {
+    const op = { op: 'mkdir' };
+    if (pathValue !== undefined) op.path = pathValue;
+    assert.throws(
+      () => applyOps([op], { cwd, dryRun: true }),
+      (error) => error.message === 'Invalid operation path',
+      'should reject a missing, non-string, blank, or NUL-containing operation path with a stable error'
+    );
+  }
+
+  assert.equal(
+    applyOps([{ op: 'mkdir', path: 'tmp/synthetic-valid-path' }], { cwd, dryRun: true }).mkdir,
+    1,
+    'should preserve a valid operation path'
+  );
+}
+
 function testApplySymlinkSafety() {
   const { applyOps } = require('../src/lib/apply');
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'safe-ops-agent-'));
@@ -1070,6 +1091,7 @@ async function main() {
   testApplySafety();
   testApplyOperationAliases();
   testApplyOperationsCollection();
+  testApplyOperationPaths();
   testApplySymlinkSafety();
   testLogSymlinkSafety();
   testServerApplyAuthorization();

@@ -635,6 +635,26 @@ async function testServerApplyOpsShape() {
     );
   }
 
+  for (const entry of [
+    { op: 0, type: 'mkdir', path: 'synthetic' },
+    { op: '', type: 'mkdir', path: 'synthetic' },
+    { op: 'mkdir', type: 0, path: 'synthetic' },
+    { op: 'mkdir', type: 'delete', path: 'synthetic' }
+  ]) {
+    const response = await invokeServerHandler(handler, {
+      method: 'POST',
+      url: '/apply',
+      body: JSON.stringify({ ops: [entry] })
+    });
+
+    assert.equal(response.statusCode, 400, 'should reject ambiguous operation aliases');
+    assert.deepEqual(
+      JSON.parse(response.body),
+      { ok: false, error: 'invalid_ops' },
+      'should return a bounded error without reflecting the operation aliases'
+    );
+  }
+
   for (const pathValue of [undefined, null, 42, {}, [], '', '   ', '\t\n', 'synthetic\0path']) {
     const entry = { op: 'mkdir' };
     if (pathValue !== undefined) entry.path = pathValue;
@@ -688,6 +708,13 @@ async function testServerApplyOpsShape() {
     body: '{"ops":[{"type":"mkdir","path":"synthetic"}]}'
   });
   assert.equal(compatibleTypeResponse.statusCode, 200, 'should preserve the type compatibility alias');
+
+  const matchingAliasesResponse = await invokeServerHandler(handler, {
+    method: 'POST',
+    url: '/apply',
+    body: '{"ops":[{"op":"mkdir","type":"mkdir","path":"synthetic"}]}'
+  });
+  assert.equal(matchingAliasesResponse.statusCode, 200, 'should preserve matching operation aliases');
 
   for (const entry of [
     { op: 'write', path: 'synthetic-omitted-content' },

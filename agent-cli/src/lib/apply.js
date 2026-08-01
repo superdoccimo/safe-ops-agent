@@ -100,6 +100,13 @@ function applyOps(ops, opts = {}) {
         throw new Error('Invalid operation kind');
       }
       const kind = hasOp ? op.op : (hasType ? op.type : undefined);
+      if (
+        typeof op.path !== 'string'
+        || op.path.trim().length === 0
+        || op.path.includes('\0')
+      ) {
+        throw new Error('Invalid operation path');
+      }
       const p = safePath(path.resolve(cwd, op.path), cwd);
 
       if (kind === 'write') {

@@ -87,7 +87,16 @@ function applyOps(ops, opts = {}) {
 
   for (const op of ops || []) {
     try {
-      const kind = op.op || op.type;
+      const hasOp = Object.prototype.hasOwnProperty.call(op, 'op');
+      const hasType = Object.prototype.hasOwnProperty.call(op, 'type');
+      if (
+        (hasOp && typeof op.op !== 'string')
+        || (hasType && typeof op.type !== 'string')
+        || (hasOp && hasType && op.op !== op.type)
+      ) {
+        throw new Error('Invalid operation kind');
+      }
+      const kind = hasOp ? op.op : (hasType ? op.type : undefined);
       const p = safePath(path.resolve(cwd, op.path), cwd);
 
       if (kind === 'write') {

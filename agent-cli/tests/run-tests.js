@@ -128,6 +128,25 @@ function testApplyOperationAliases() {
   }
 }
 
+function testApplyOperationsCollection() {
+  const { applyOps } = require('../src/lib/apply');
+  const cwd = path.resolve(__dirname, '..', '..');
+
+  for (const ops of [undefined, null, {}, 'write']) {
+    assert.throws(
+      () => applyOps(ops, { cwd, dryRun: true }),
+      (error) => error.message === 'Invalid operations payload',
+      'should reject a non-array operations collection with a stable error'
+    );
+  }
+
+  assert.deepEqual(
+    applyOps([], { cwd, dryRun: true }),
+    { wrote: 0, deleted: 0, mkdir: 0, errors: 0, details: [] },
+    'should preserve an empty operations array'
+  );
+}
+
 function testApplySymlinkSafety() {
   const { applyOps } = require('../src/lib/apply');
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'safe-ops-agent-'));
@@ -1050,6 +1069,7 @@ async function main() {
   testPatchSymlinkReadSafety();
   testApplySafety();
   testApplyOperationAliases();
+  testApplyOperationsCollection();
   testApplySymlinkSafety();
   testLogSymlinkSafety();
   testServerApplyAuthorization();

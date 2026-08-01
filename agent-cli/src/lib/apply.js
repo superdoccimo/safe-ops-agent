@@ -81,11 +81,14 @@ function isSubPath(root, target) {
 }
 
 function applyOps(ops, opts = {}) {
+  if (!Array.isArray(ops)) {
+    throw new Error('Invalid operations payload');
+  }
   const cwd = opts.cwd || process.cwd();
   const dryRun = !!opts.dryRun;
   const summary = { wrote: 0, deleted: 0, mkdir: 0, errors: 0, details: [] };
 
-  for (const op of ops || []) {
+  for (const op of ops) {
     try {
       const hasOp = Object.prototype.hasOwnProperty.call(op, 'op');
       const hasType = Object.prototype.hasOwnProperty.call(op, 'type');

@@ -101,6 +101,33 @@ function testApplySafety() {
   assert.ok(threw, 'should refuse outside workspace');
 }
 
+function testApplyOperationAliases() {
+  const { applyOps } = require('../src/lib/apply');
+  const cwd = path.resolve(__dirname, '..', '..');
+
+  for (const op of [
+    { op: 0, type: 'mkdir', path: 'tmp/synthetic-alias' },
+    { op: '', type: 'mkdir', path: 'tmp/synthetic-alias' },
+    { op: 'mkdir', type: 0, path: 'tmp/synthetic-alias' },
+    { op: 'mkdir', type: 'delete', path: 'tmp/synthetic-alias' }
+  ]) {
+    assert.throws(
+      () => applyOps([op], { cwd, dryRun: true }),
+      /invalid operation kind/i,
+      'should reject ambiguous operation aliases before filesystem mutation'
+    );
+  }
+
+  for (const op of [
+    { op: 'mkdir', path: 'tmp/synthetic-op' },
+    { type: 'mkdir', path: 'tmp/synthetic-type' },
+    { op: 'mkdir', type: 'mkdir', path: 'tmp/synthetic-matching-aliases' }
+  ]) {
+    const summary = applyOps([op], { cwd, dryRun: true });
+    assert.equal(summary.mkdir, 1, 'should preserve supported unambiguous aliases');
+  }
+}
+
 function testApplySymlinkSafety() {
   const { applyOps } = require('../src/lib/apply');
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'safe-ops-agent-'));
@@ -1022,6 +1049,7 @@ async function main() {
   testPatch();
   testPatchSymlinkReadSafety();
   testApplySafety();
+  testApplyOperationAliases();
   testApplySymlinkSafety();
   testLogSymlinkSafety();
   testServerApplyAuthorization();

@@ -165,7 +165,13 @@ function createRequestHandler(config, flags, dependencies = {}) {
           !Array.isArray(body.ops)
           || body.ops.some((op) => {
             if (op === null || typeof op !== 'object' || Array.isArray(op)) return true;
-            const kind = op.op || op.type;
+            const hasOp = Object.prototype.hasOwnProperty.call(op, 'op');
+            const hasType = Object.prototype.hasOwnProperty.call(op, 'type');
+            if ((hasOp && typeof op.op !== 'string') || (hasType && typeof op.type !== 'string')) {
+              return true;
+            }
+            if (hasOp && hasType && op.op !== op.type) return true;
+            const kind = hasOp ? op.op : op.type;
             return typeof kind !== 'string'
               || !APPLY_OP_KINDS.has(kind)
               || typeof op.path !== 'string'

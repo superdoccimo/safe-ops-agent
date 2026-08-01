@@ -147,6 +147,25 @@ function testApplyOperationsCollection() {
   );
 }
 
+function testApplyOperationEntryShapes() {
+  const { applyOps } = require('../src/lib/apply');
+  const cwd = path.resolve(__dirname, '..', '..');
+
+  for (const op of [null, undefined, true, 42, 'mkdir', []]) {
+    assert.throws(
+      () => applyOps([op], { cwd, dryRun: true }),
+      (error) => error.message === 'Invalid operation entry',
+      'should reject a non-object operation entry with a stable error'
+    );
+  }
+
+  assert.equal(
+    applyOps([{ op: 'mkdir', path: 'tmp/synthetic-valid-entry' }], { cwd, dryRun: true }).mkdir,
+    1,
+    'should preserve a valid operation object'
+  );
+}
+
 function testApplyOperationPaths() {
   const { applyOps } = require('../src/lib/apply');
   const cwd = path.resolve(__dirname, '..', '..');
@@ -1091,6 +1110,7 @@ async function main() {
   testApplySafety();
   testApplyOperationAliases();
   testApplyOperationsCollection();
+  testApplyOperationEntryShapes();
   testApplyOperationPaths();
   testApplySymlinkSafety();
   testLogSymlinkSafety();

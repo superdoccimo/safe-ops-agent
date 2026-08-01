@@ -90,6 +90,9 @@ function applyOps(ops, opts = {}) {
 
   for (const op of ops) {
     try {
+      if (op === null || typeof op !== 'object' || Array.isArray(op)) {
+        throw new Error('Invalid operation entry');
+      }
       const hasOp = Object.prototype.hasOwnProperty.call(op, 'op');
       const hasType = Object.prototype.hasOwnProperty.call(op, 'type');
       if (
